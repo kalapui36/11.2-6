@@ -1,0 +1,226 @@
+/* 크롬북(1366px)과 전자칠판(1920px)에서 크게 보이도록 화면 너비에 맞춰 글씨 크기를 키운다. */
+:root {
+  --bg: #f5f3ee;
+  --card: #ffffff;
+  --ink: #1f2328;
+  --muted: #5b6470;
+  --line: #e0dbd0;
+  --accent: #2563a8;
+  --accent-soft: #e3edf8;
+  --mine: #2f7d4f;
+  --mine-soft: #e2f3e8;
+  --mate: #8a5a12;
+  --mate-soft: #fbefd9;
+  --danger: #b4372f;
+  --radius: 14px;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: clamp(18px, 1.25vw, 26px); }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+}
+button:disabled { cursor: not-allowed; }
+
+.btn {
+  padding: 0.55em 1.2em;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.08); }
+.btn:disabled { background: #b9c0c8; color: #f4f5f6; }
+.btn-ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+.btn-danger { background: var(--danger); }
+.btn-large { font-size: 1.25rem; padding: 0.7em 1.6em; }
+
+/* ---------- 입장 화면 ---------- */
+.entry {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+.entry h1 { font-size: 2rem; margin: 0 0 0.3em; }
+.entry .lead { color: var(--muted); margin: 0 0 2rem; }
+.entry h2 { font-size: 1.25rem; margin: 2rem 0 0.8rem; }
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem;
+}
+.choice {
+  background: var(--card);
+  border: 3px solid var(--line);
+  color: var(--ink);
+  padding: 0.8em 1.4em;
+  font-size: 1.15rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+.choice.num { width: 4.5rem; height: 4.5rem; padding: 0; font-size: 1.6rem; }
+.choice[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.entry .start { margin-top: 2.5rem; }
+
+/* ---------- 상단 막대와 탭 ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1.5rem;
+}
+.topbar .brand { font-weight: 800; font-size: 1.15rem; }
+.topbar .me { margin-left: auto; font-weight: 700; }
+.topbar .me .num { color: var(--accent); }
+.topbar .reset { font-size: 0.85rem; padding: 0.35em 0.9em; }
+
+.tabs { display: flex; gap: 0.3rem; padding: 0 1.5rem; }
+.tab {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  padding: 0.6em 1.2em;
+  border-radius: 10px 10px 0 0;
+  border-bottom: 4px solid transparent;
+}
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+
+main { padding: 1.5rem; max-width: 1800px; margin: 0 auto; }
+.hint { color: var(--muted); margin: 0 0 1rem; }
+
+/* ---------- 자료 카드 그리드 ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1.2rem;
+}
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: var(--card);
+  border: 3px solid transparent;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  text-align: left;
+  color: var(--ink);
+}
+.card:hover { transform: translateY(-2px); }
+.card.is-mine { border-color: var(--mine); }
+.card.is-mate { border-color: var(--mate); }
+.card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #ddd; display: block; }
+.card .title { padding: 0.7rem 0.9rem 0.9rem; font-weight: 700; font-size: 1.05rem; line-height: 1.4; }
+
+.badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  padding: 0.2em 0.7em;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+.badge.mine { background: var(--mine); color: #fff; }
+.badge.mate { background: var(--mate-soft); color: var(--mate); border: 2px solid var(--mate); }
+
+/* ---------- 모달(상세 화면, 확인 창) ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(20, 24, 30, 0.55);
+}
+.modal {
+  position: relative;
+  width: min(1100px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+.modal .close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.detail { display: grid; grid-template-columns: 1fr 1fr; }
+.detail img { width: 100%; height: 100%; min-height: 18rem; object-fit: cover; background: #ddd; display: block; }
+.detail .content { padding: 1.6rem 1.8rem; display: flex; flex-direction: column; }
+.detail h2 { margin: 0 0 0.8rem; font-size: 1.5rem; line-height: 1.35; }
+.detail .body { margin: 0 0 1rem; font-size: 1.1rem; }
+.detail .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.4rem; }
+.detail .actions { margin-top: auto; display: flex; flex-direction: column; gap: 0.6rem; align-items: flex-start; }
+.detail .status { font-weight: 700; }
+.detail .status.mine { color: var(--mine); }
+.detail .status.mate { color: var(--mate); }
+
+@media (max-width: 900px) {
+  .detail { grid-template-columns: 1fr; }
+  .detail img { min-height: 0; aspect-ratio: 4 / 3; }
+}
+
+.confirm { width: min(640px, 100%); padding: 1.8rem; text-align: center; }
+.confirm p { font-size: 1.2rem; font-weight: 700; margin: 0 0 0.4rem; }
+.confirm .sub { font-size: 1rem; font-weight: 400; color: var(--danger); }
+.confirm .buttons { display: flex; gap: 0.8rem; justify-content: center; margin-top: 1.4rem; }
+
+/* ---------- 내 카드 / 친구 카드 ---------- */
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+.mycard { max-width: 1100px; margin: 0 auto; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+/* ---------- 알림 ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+  z-index: 200;
+  padding: 0.8em 1.6em;
+  background: #222;
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
