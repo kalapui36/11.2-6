@@ -5,7 +5,6 @@
   const TEXT_MAX = 300;
   const itemsById = Object.fromEntries(ITEMS.map((it) => [it.id, it]));
   const groupsById = Object.fromEntries(GROUPS.map((g) => [g.id, g]));
-  const itemOrder = seededShuffle(ITEMS.map((it) => it.id), SHUFFLE_SEED);
 
   const state = {
     me: loadMe(),          // { group, num } 또는 null
@@ -22,23 +21,6 @@
   const modalRoot = document.getElementById('modal-root');
 
   // ---------- 도움 함수 ----------
-  function seededShuffle(arr, seed) {
-    const a = arr.slice();
-    let s = seed >>> 0;
-    const rand = () => {
-      s = (s + 0x6d2b79f5) >>> 0;
-      let t = s;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
   function loadMe() {
     try {
       const me = JSON.parse(localStorage.getItem(ME_KEY));
@@ -120,34 +102,54 @@
 
   function renderEntry() {
     const { group, num } = state.pick;
-    const groupButtons = GROUPS.map((g) => `
-      <button class="choice" data-action="pick-group" data-group="${g.id}"
-        aria-pressed="${group === g.id}">${esc(g.name)}</button>`).join('');
+    const groupButtons = GROUPS.map((g) => {
+      const st = GROUP_STYLE[g.id];
+      return `
+        <button class="gchoice" data-action="pick-group" data-group="${g.id}"
+          aria-pressed="${group === g.id}" style="--g:${st.color};--gs:${st.soft}">
+          <span class="gchoice-icon">${icon(st.icon)}</span>
+          <span class="gchoice-name">${esc(g.name)}</span>
+          <span class="gchoice-check">${icon('check')}</span>
+        </button>`;
+    }).join('');
     const numButtons = Array.from({ length: MEMBERS_PER_GROUP }, (_, i) => i + 1).map((n) => `
-      <button class="choice num" data-action="pick-num" data-num="${n}"
+      <button class="nchoice" data-action="pick-num" data-num="${n}"
         aria-pressed="${num === n}">${n}</button>`).join('');
 
     app.innerHTML = `
-      <section class="entry">
-        <h1>지구촌 문제 자료 탐색</h1>
-        <p class="lead">우리 모둠과 내 번호를 골라 주세요.</p>
-        <h2>① 우리 모둠</h2>
-        <div class="choice-row">${groupButtons}</div>
-        <h2>② 내 번호</h2>
-        <div class="choice-row">${numButtons}</div>
-        <button class="btn btn-large start" data-action="start" ${group && num ? '' : 'disabled'}>시작하기</button>
-      </section>`;
+      <div class="entry">
+        <section class="entry-hero">
+          <div class="brand-mark">${icon('globe')}</div>
+          <p class="entry-kicker">6학년 사회 · 지구촌의 문제와 지속가능한 미래</p>
+          <h1>지구촌 문제<br>자료 탐색</h1>
+          <div class="entry-question">
+            <span class="label">탐구 질문</span>
+            <p>지구촌을 위협하는 문제에는 어떤 것들이 있을까요?</p>
+          </div>
+        </section>
+        <section class="entry-form">
+          <div class="step-head"><span class="step-no">1</span><h2>우리 모둠을 골라요</h2></div>
+          <div class="gchoice-list">${groupButtons}</div>
+          <div class="step-head"><span class="step-no">2</span><h2>내 번호를 골라요</h2></div>
+          <div class="nchoice-row">${numButtons}</div>
+          <button class="btn btn-large btn-block start" data-action="start" ${group && num ? '' : 'disabled'}>
+            시작하기 ${icon('arrowRight')}
+          </button>
+        </section>
+      </div>`;
   }
 
   function renderMain() {
     const group = groupsById[state.me.group];
+    const friendsOpen = !!state.db.settings.friendsOpen;
+    const mineDone = !!savedText(myId(), myItemId());
     const tabs = [
-      ['items', '자료 모음'],
-      ['mine', '내 카드'],
-      ['friends', state.db.settings.friendsOpen ? '친구 카드' : '친구 카드 🔒'],
-    ].map(([id, label]) => `
+      ['items', 'grid', '자료 모음', ''],
+      ['mine', 'card', '내 카드', myItemId() ? `<span class="tab-dot ${mineDone ? 'done' : ''}"></span>` : ''],
+      ['friends', friendsOpen ? 'users' : 'lock', '친구 카드', ''],
+    ].map(([id, ic, label, extra]) => `
       <button class="tab" role="tab" data-action="tab" data-tab="${id}"
-        aria-selected="${state.tab === id}">${label}</button>`).join('');
+        aria-selected="${state.tab === id}">${icon(ic)}<span>${label}</span>${extra}</button>`).join('');
 
     let content = '';
     if (state.tab === 'items') content = renderItems();
@@ -157,81 +159,143 @@
     app.innerHTML = `
       <header class="topbar">
         <div class="topbar-inner">
-          <span class="brand">🌏 지구촌 문제 자료 탐색</span>
-          ${Store.mode === 'local' ? '<span class="mode-note">시험 모드: 이 브라우저에만 저장돼요</span>' : ''}
-          <span class="me">${esc(group.name)} · <span class="num">${state.me.num}번</span></span>
-          <button class="btn btn-ghost reset" data-action="reset-me">다시 고르기</button>
+          <div class="brand">
+            <span class="brand-mark sm">${icon('globe')}</span>
+            <span class="brand-text">
+              <strong>지구촌 문제 자료 탐색</strong>
+              <small>6학년 사회 · 지구촌의 문제와 지속가능한 미래</small>
+            </span>
+          </div>
+          ${Store.mode === 'local' ? '<span class="mode-note">시험 모드 · 이 브라우저에만 저장</span>' : ''}
+          <div class="me">
+            ${groupChip(group.id, `${group.name} ${state.me.num}번`)}
+            <button class="btn-text" data-action="reset-me">다시 고르기</button>
+          </div>
         </div>
         <nav class="tabs" role="tablist">${tabs}</nav>
       </header>
       <main>${content}</main>`;
   }
 
+  function pageHead(step, title, desc) {
+    return `
+      <div class="page-head">
+        <span class="step-pill">${step}</span>
+        <div>
+          <h1>${title}</h1>
+          <p>${desc}</p>
+        </div>
+      </div>`;
+  }
+
   function renderItems() {
     const mine = myItemId();
-    const cards = itemOrder.map((id) => {
+    const cards = ITEM_ORDER.map((id) => {
       const it = itemsById[id];
       const mateNum = mateNumFor(id);
       let cls = 'card';
       let badge = '';
       if (id === mine) {
         cls += ' is-mine';
-        badge = '<span class="badge mine">내 자료</span>';
+        badge = `<span class="badge mine">${icon('check')}내 자료</span>`;
       } else if (mateNum) {
         cls += ' is-mate';
         badge = `<span class="badge mate">우리 모둠 ${mateNum}번</span>`;
       }
       return `
         <button class="${cls}" data-action="open" data-item="${id}">
-          ${badge}
-          <img src="${esc(it.image)}" alt="" loading="lazy">
-          <span class="title">${esc(it.title)}</span>
+          <span class="card-img">
+            <img src="${esc(it.image)}" alt="" loading="lazy">
+            <span class="card-no">자료 ${ITEM_NO[id]}</span>
+            ${badge}
+          </span>
+          <span class="card-title">${esc(it.title)}</span>
+          <span class="card-more">자세히 보기 ${icon('arrowRight')}</span>
         </button>`;
     }).join('');
 
     return `
-      <p class="hint">카드를 눌러 자료를 읽고, 우리 모둠 주제에 해당하는 자료를 하나 가져가세요.</p>
+      ${pageHead('활동 1', '우리 모둠 주제에 맞는 자료 찾기', '카드를 눌러 자료를 읽고, 우리 모둠 주제에 해당하는 자료를 한 사람이 하나씩 가져가요.')}
       <div class="grid">${cards}</div>`;
   }
 
   function renderMine() {
     const id = myItemId();
     if (!id) {
-      return `<div class="empty">아직 가져간 자료가 없어요.<br>'자료 모음'에서 자료를 골라 가져가세요.</div>`;
+      return emptyState('card', '아직 가져간 자료가 없어요', "'자료 모음'에서 우리 모둠 주제에 맞는 자료를 골라 가져가세요.",
+        `<button class="btn" data-action="tab" data-tab="items">${icon('grid')}자료 모음으로 가기</button>`);
     }
     const it = itemsById[id];
     const text = currentText();
+    const saved = !!savedText(myId(), id);
+    const steps = [
+      ['자료 읽기', true],
+      ['문장 쓰기', !!text.trim() && text !== SENTENCE_FRAME],
+      ['저장하기', saved && !isDirty()],
+    ].map(([label, done], i) => `
+      <li class="${done ? 'done' : ''}"><span>${done ? icon('check') : i + 1}</span>${label}</li>`).join('');
+
     return `
-      <article class="mycard">
-        <div class="detail">
-          <img src="${esc(it.image)}" alt="">
-          <div class="content">
+      ${pageHead('활동 2', '문제 상황과 심각성 정리하기', '자료를 다시 읽고, 어디에서 어떤 문제가 일어나는지와 얼마나 심각한지를 1~2문장으로 써요.')}
+      <div class="mine-layout">
+        <article class="paper">
+          <div class="paper-img">
+            <img src="${esc(it.image)}" alt="">
+            <span class="card-no">자료 ${ITEM_NO[id]}</span>
+          </div>
+          <div class="paper-body">
             <h2>${esc(it.title)}</h2>
             <p class="body">${esc(it.body)}</p>
-            <p class="meta">출처: ${esc(it.source)} · ${esc(it.date)}</p>
+            ${metaHtml(it)}
           </div>
-        </div>
-        <div class="writer">
-          <label for="entry-text">자료의 문제 상황과 심각성을 1~2문장으로 정리해 보세요.</label>
-          <textarea id="entry-text" rows="3" maxlength="${TEXT_MAX}"
+        </article>
+        <section class="writer">
+          <ol class="steps">${steps}</ol>
+          <label for="entry-text">${icon('pencil')}나의 정리</label>
+          <div class="guide">
+            <span>어디에서?</span><span>어떤 문제가?</span><span>얼마나 심각한가?</span>
+          </div>
+          <textarea id="entry-text" rows="5" maxlength="${TEXT_MAX}"
             placeholder="어디에서 어떤 문제가 일어나고 있나요? 얼마나 심각한가요?">${esc(text)}</textarea>
-          <div class="writer-bar">
+          <div class="writer-meta">
             <span id="save-state" class="save-state">${saveStateHtml()}</span>
-            <button class="btn btn-ghost btn-large" data-action="explain">설명 모드</button>
-            <button id="save-btn" class="btn btn-large" data-action="save"
-              ${!isDirty() || !text.trim() || state.busy ? 'disabled' : ''}>저장</button>
+            <span id="char-count" class="char-count">${text.length} / ${TEXT_MAX}</span>
           </div>
-        </div>
-      </article>`;
+          <div class="writer-actions">
+            <button id="save-btn" class="btn btn-large" data-action="save"
+              ${!isDirty() || !text.trim() || state.busy ? 'disabled' : ''}>${icon('save')}저장</button>
+            <button class="btn btn-ghost btn-large" data-action="explain">${icon('present')}설명 모드</button>
+          </div>
+          <p class="writer-tip">활동 3에서 친구에게 보여 줄 때 '설명 모드'를 켜요.</p>
+        </section>
+      </div>`;
+  }
+
+  function metaHtml(it) {
+    return `
+      <div class="meta">
+        <span>${icon('source')}${esc(it.source)}</span>
+        <span>${icon('calendar')}${esc(it.date)}</span>
+      </div>`;
+  }
+
+  function emptyState(ic, title, desc, action = '') {
+    return `
+      <div class="empty">
+        <div class="empty-icon">${icon(ic)}</div>
+        <h2>${title}</h2>
+        <p>${desc}</p>
+        ${action}
+      </div>`;
   }
 
   function saveStateHtml() {
     const entry = state.db.entries[myId()];
-    if (isDirty()) return '<span class="dirty">● 아직 저장하지 않았어요</span>';
+    if (isDirty()) return '<span class="dirty"><i></i>아직 저장하지 않았어요</span>';
     if (entry && entry.itemId === myItemId()) {
       const t = new Date(entry.updatedAt);
       const hm = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
-      return `<span class="saved">✔ 저장했어요 (${hm})</span>`;
+      return `<span class="saved">${icon('check')}저장했어요 · ${hm}</span>`;
     }
     return '';
   }
@@ -240,15 +304,18 @@
   function updateSaveBar() {
     const st = document.getElementById('save-state');
     const btn = document.getElementById('save-btn');
+    const cc = document.getElementById('char-count');
     if (st) st.innerHTML = saveStateHtml();
     if (btn) btn.disabled = !isDirty() || !currentText().trim() || state.busy;
+    if (cc) cc.textContent = `${currentText().length} / ${TEXT_MAX}`;
   }
 
   function renderFriends() {
     if (!state.db.settings.friendsOpen) {
-      return `<div class="empty">🔒 친구 카드는 선생님이 열어 주시면 볼 수 있어요.</div>`;
+      return emptyState('lock', '친구 카드는 아직 잠겨 있어요', '활동 3이 끝나면 선생님이 열어 주실 거예요.');
     }
     const sections = GROUPS.map((g) => {
+      const st = GROUP_STYLE[g.id];
       const cards = Array.from({ length: MEMBERS_PER_GROUP }, (_, i) => i + 1).map((n) => {
         const sid = makeStudentId(g.id, n);
         const itemId = state.db.claims[sid];
@@ -263,8 +330,10 @@
         const text = savedText(sid, itemId);
         return `
           <div class="fcard">
-            <span class="who">${n}번</span>
-            <img src="${esc(it.image)}" alt="" loading="lazy">
+            <div class="fcard-img">
+              <img src="${esc(it.image)}" alt="" loading="lazy">
+              <span class="who">${n}번</span>
+            </div>
             <div class="fbody">
               <h3>${esc(it.title)}</h3>
               ${text ? `<p>${esc(text)}</p>` : '<p class="none">아직 정리하지 않았어요.</p>'}
@@ -272,12 +341,14 @@
           </div>`;
       }).join('');
       return `
-        <section class="fgroup">
-          <h2>${esc(g.name)} 모둠</h2>
+        <section class="fgroup" style="--g:${st.color};--gs:${st.soft}">
+          <h2><span class="fgroup-icon">${icon(st.icon)}</span>${esc(g.name)} 모둠</h2>
           <div class="fgrid">${cards}</div>
         </section>`;
     }).join('');
-    return `<p class="hint">친구들이 정리한 내용을 읽고 정리표를 보완해 보세요.</p>${sections}`;
+    return `
+      ${pageHead('정리', '친구 카드 살펴보기', '친구들이 정리한 내용을 읽고 정리표의 빈칸을 채워요.')}
+      ${sections}`;
   }
 
   function renderOverlay() {
@@ -294,11 +365,15 @@
       return;
     }
     const text = savedText(myId(), it.id);
+    const group = groupsById[state.me.group];
     modalRoot.innerHTML = `
       <div class="explain" role="dialog" aria-modal="true">
-        <button class="btn btn-ghost explain-close" data-action="close-explain">✕ 닫기</button>
-        <img src="${esc(it.image)}" alt="">
-        <h2>${esc(it.title)}</h2>
+        <div class="explain-top">
+          ${groupChip(group.id, `${group.name} ${state.me.num}번`)}
+          <button class="btn btn-ghost explain-close" data-action="close-explain">${icon('x')}닫기</button>
+        </div>
+        <div class="explain-img"><img src="${esc(it.image)}" alt=""></div>
+        <p class="explain-title">자료 ${ITEM_NO[it.id]} · ${esc(it.title)}</p>
         ${text ? `<p class="explain-text">${esc(text)}</p>` : '<p class="explain-text none">아직 정리를 저장하지 않았어요.</p>'}
       </div>`;
   }
@@ -316,29 +391,32 @@
     let actions;
     if (id === mine) {
       actions = `
-        <span class="status mine">✔ 내가 가져간 자료예요.</span>
-        <button class="btn btn-danger btn-large" data-action="release" ${state.busy ? 'disabled' : ''}>내려놓기</button>`;
+        <span class="status mine">${icon('check')}내가 가져간 자료예요</span>
+        <button class="btn btn-ghost-danger btn-large" data-action="release" ${state.busy ? 'disabled' : ''}>내려놓기</button>`;
     } else if (mateNum) {
       actions = `
-        <span class="status mate">우리 모둠 ${mateNum}번이 이미 가져갔어요.</span>
+        <span class="status mate">${icon('lock')}우리 모둠 ${mateNum}번이 이미 가져갔어요</span>
         <button class="btn btn-large" disabled>가져가기</button>`;
     } else {
-      actions = `<button class="btn btn-large" data-action="claim" ${state.busy ? 'disabled' : ''}>가져가기</button>`;
+      actions = `
+        <span class="status">우리 모둠 주제에 맞는 자료인가요?</span>
+        <button class="btn btn-large" data-action="claim" ${state.busy ? 'disabled' : ''}>가져가기 ${icon('arrowRight')}</button>`;
     }
 
     modalRoot.innerHTML = `
       <div class="overlay" data-action="close">
-        <div class="modal" role="dialog" aria-modal="true" aria-label="${esc(it.title)}">
-          <button class="close" data-action="close" aria-label="닫기">✕</button>
+        <div class="modal detail-modal" role="dialog" aria-modal="true" aria-label="${esc(it.title)}">
+          <button class="close" data-action="close" aria-label="닫기">${icon('x')}</button>
           <div class="detail">
-            <img src="${esc(it.image)}" alt="">
+            <div class="detail-img"><img src="${esc(it.image)}" alt=""></div>
             <div class="content">
+              <span class="kicker">자료 ${ITEM_NO[id]}</span>
               <h2>${esc(it.title)}</h2>
               <p class="body">${esc(it.body)}</p>
-              <p class="meta">출처: ${esc(it.source)} · ${esc(it.date)}</p>
-              <div class="actions">${actions}</div>
+              ${metaHtml(it)}
             </div>
           </div>
+          <div class="actions">${actions}</div>
         </div>
       </div>`;
   }
@@ -363,9 +441,9 @@
         setDraft(null);
         toast('자료를 가져갔어요.');
       }
-      else toast(`우리 모둠 ${parseStudentId(res.holder).num}번이 먼저 가져갔어요.`);
+      else toast(`우리 모둠 ${parseStudentId(res.holder).num}번이 먼저 가져갔어요.`, 'error');
     } catch (e) {
-      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
+      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.', 'error');
     } finally {
       state.busy = false;
       render();
@@ -387,7 +465,7 @@
       setDraft(null);
       toast('자료를 내려놓았어요.');
     } catch (e) {
-      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
+      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.', 'error');
     } finally {
       state.busy = false;
       render();
@@ -409,7 +487,7 @@
       setDraft(null);
       toast('저장했어요.');
     } catch (e) {
-      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
+      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.', 'error');
     } finally {
       state.busy = false;
       render();

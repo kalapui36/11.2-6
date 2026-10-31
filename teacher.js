@@ -121,12 +121,15 @@
 
   function renderPin() {
     app.innerHTML = `
-      <form class="pin" data-form="pin">
-        <h1>교사 화면</h1>
-        <p class="lead">PIN을 입력하세요.</p>
-        <input id="pin" type="password" inputmode="numeric" autocomplete="off" autofocus>
-        <button class="btn btn-large" type="submit">들어가기</button>
-      </form>`;
+      <div class="pin-wrap">
+        <form class="pin" data-form="pin">
+          <div class="brand-mark">${icon('lock')}</div>
+          <h1>교사 화면</h1>
+          <p class="lead">지구촌 문제 자료 탐색 · 교사용</p>
+          <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" autofocus>
+          <button class="btn btn-large btn-block" type="submit">들어가기 ${icon('arrowRight')}</button>
+        </form>
+      </div>`;
     document.getElementById('pin').focus();
   }
 
@@ -135,12 +138,12 @@
     const friendsOpen = !!state.db.settings.friendsOpen;
     const checks = allStudentIds().filter(checkReason).length;
     const nav = [
-      ['status', `현황판${checks ? ` <span class="pill warn">${checks}</span>` : ''}`],
-      ['overlap', '겹친 자료'],
-      ['remaining', '남은 자료'],
-      ['settings', '설정 · 초기화'],
-    ].map(([id, label]) => `
-      <button class="tab" data-action="view" data-view="${id}" aria-selected="${state.view === id}">${label}</button>`).join('');
+      ['status', 'grid', `현황판${checks ? ` <span class="pill warn">${checks}</span>` : ''}`],
+      ['overlap', 'link', '겹친 자료'],
+      ['remaining', 'eye', '남은 자료'],
+      ['settings', 'gear', '설정 · 초기화'],
+    ].map(([id, ic, label]) => `
+      <button class="tab" data-action="view" data-view="${id}" aria-selected="${state.view === id}">${icon(ic)}<span>${label}</span></button>`).join('');
 
     let content;
     if (state.view === 'status') content = renderStatus();
@@ -151,13 +154,22 @@
     app.innerHTML = `
       <header class="topbar">
         <div class="topbar-inner">
-          <span class="brand">🌏 교사 화면</span>
-          ${Store.mode === 'local' ? '<span class="mode-note">시험 모드: 이 브라우저에만 저장돼요</span>' : ''}
-          <span class="summary">가져감 <b>${c.claimed}</b>/${TOTAL} · 정리 <b>${c.written}</b>/${TOTAL}</span>
-          <button class="btn ${friendsOpen ? 'btn-on' : 'btn-ghost'}" data-action="toggle-friends">
-            친구 카드 ${friendsOpen ? '열림 🔓' : '닫힘 🔒'}
+          <div class="brand">
+            <span class="brand-mark sm">${icon('globe')}</span>
+            <span class="brand-text">
+              <strong>교사 화면</strong>
+              <small>지구촌 문제 자료 탐색</small>
+            </span>
+          </div>
+          ${Store.mode === 'local' ? '<span class="mode-note">시험 모드 · 이 브라우저에만 저장</span>' : ''}
+          <div class="summary">
+            <span class="stat"><small>가져감</small><b>${c.claimed}</b>/${TOTAL}</span>
+            <span class="stat"><small>정리</small><b>${c.written}</b>/${TOTAL}</span>
+          </div>
+          <button class="switch ${friendsOpen ? 'on' : ''}" data-action="toggle-friends" aria-pressed="${friendsOpen}">
+            ${icon(friendsOpen ? 'unlock' : 'lock')}<span>친구 카드 ${friendsOpen ? '열림' : '닫힘'}</span><i></i>
           </button>
-          <button class="btn" data-action="board-open">칠판 모드 ▶</button>
+          <button class="btn btn-sun" data-action="board-open">${icon('board')}칠판 모드</button>
         </div>
         <nav class="tabs">${nav}</nav>
       </header>
@@ -177,14 +189,15 @@
         }
         return `
           <td class="cell ${entry ? 'done' : 'no-entry'} ${reason ? 'check' : ''}">
-            ${reason ? `<span class="flag">⚠ ${reason}</span>` : ''}
-            <span class="item">${esc(itemsById[itemId].title)}</span>
+            ${reason ? `<span class="flag">${icon('alert')}${reason}</span>` : ''}
+            <span class="item"><em>${ITEM_NO[itemId]}</em>${esc(itemsById[itemId].title)}</span>
             ${entry
               ? `<span class="text">${esc(entry.text)}</span>`
               : '<span class="state">정리 전</span>'}
           </td>`;
       }).join('');
-      return `<tr><th class="gname">${esc(g.name)}</th>${cells}</tr>`;
+      const st = GROUP_STYLE[g.id];
+      return `<tr><th class="gname" style="--g:${st.color};--gs:${st.soft}"><span class="gname-icon">${icon(st.icon)}</span>${esc(g.name)}</th>${cells}</tr>`;
     }).join('');
 
     const checkList = allStudentIds()
@@ -193,7 +206,7 @@
       .map(({ sid, reason }) => `
         <li>
           <b>${esc(studentLabel(sid))}</b>
-          <span>${esc(itemsById[claimOf(sid)].title)}</span>
+          <span>자료 ${ITEM_NO[claimOf(sid)]} · ${esc(itemsById[claimOf(sid)].title)}</span>
           <span class="pill warn">${reason}</span>
         </li>`).join('');
 
@@ -212,7 +225,7 @@
           </p>
         </section>
         <aside class="checks">
-          <h2>확인 필요 <small>교사만 보세요</small></h2>
+          <h2>${icon('alert')}확인 필요 <small>교사만 보세요</small></h2>
           ${checkList ? `<ul>${checkList}</ul>` : '<p class="muted">지금은 없어요.</p>'}
         </aside>
       </div>`;
@@ -223,7 +236,10 @@
     const attrs = clickable ? `data-action="open-item" data-item="${it.id}"` : '';
     return `
       <${tag} class="big-card" ${attrs}>
-        <img src="${esc(it.image)}" alt="" loading="lazy">
+        <span class="big-card-img">
+          <img src="${esc(it.image)}" alt="" loading="lazy">
+          <span class="card-no">자료 ${ITEM_NO[it.id]}</span>
+        </span>
         <div class="big-card-body">
           <h3>${esc(it.title)}</h3>
           ${extra}
@@ -233,21 +249,21 @@
 
   function overlapCards() {
     const list = overlaps();
-    if (!list.length) return '<p class="empty">아직 두 모둠 이상이 함께 가져간 자료가 없어요.</p>';
+    if (!list.length) return `<div class="empty"><div class="empty-icon">${icon('link')}</div><p>아직 두 모둠 이상이 함께 가져간 자료가 없어요.</p></div>`;
     return `<div class="big-grid">${list.map(({ item, groups }) => itemCard(item, `
-      <div class="chips">${groups.map((g) => `<span class="chip">${esc(groupsById[g].name)}</span>`).join('')}</div>`)).join('')}</div>`;
+      <div class="chips">${groups.map((g) => groupChip(g, groupsById[g].name)).join('')}</div>`)).join('')}</div>`;
   }
 
   function remainingCards() {
     const list = remainingItems();
-    if (!list.length) return '<p class="empty">남은 자료가 없어요. 모든 자료를 누군가 가져갔어요.</p>';
+    if (!list.length) return `<div class="empty"><div class="empty-icon">${icon('check')}</div><p>남은 자료가 없어요. 모든 자료를 누군가 가져갔어요.</p></div>`;
     return `<div class="big-grid">${list.map((it) => itemCard(it, '', true)).join('')}</div>`;
   }
 
   function renderOverlapView() {
     return `
-      <h2 class="view-title">두 모둠 이상이 가져간 자료</h2>
-      <p class="hint">정리 때 전자칠판에 띄워 "왜 여러 모둠이 같은 자료를 골랐을까요?"를 물어보세요.</p>
+      <div class="page-head"><div><h1>두 모둠 이상이 가져간 자료</h1>
+      <p>정리 때 전자칠판에 띄워 "왜 여러 모둠이 같은 자료를 골랐을까요?"를 물어보세요.</p></div></div>
       ${overlapCards()}`;
   }
 
@@ -255,14 +271,17 @@
     const n = remainingItems().length;
     if (!state.showRemaining) {
       return `
-        <div class="reveal">
-          <p>아무도 가져가지 않은 자료가 <b>${n}개</b> 있어요.</p>
-          <button class="btn btn-large" data-action="show-remaining">남은 자료 보기</button>
+        <div class="empty">
+          <div class="empty-icon">${icon('eye')}</div>
+          <h2>아무도 가져가지 않은 자료 ${n}개</h2>
+          <p>차시 예고 때 버튼을 눌러 공개하세요.</p>
+          <button class="btn btn-large" data-action="show-remaining">${icon('eye')}남은 자료 보기</button>
         </div>`;
     }
     return `
-      <h2 class="view-title">아무도 가져가지 않은 자료 <button class="btn btn-ghost" data-action="hide-remaining">숨기기</button></h2>
-      <p class="hint">카드를 누르면 본문이 크게 열려요.</p>
+      <div class="page-head"><div><h1>아무도 가져가지 않은 자료</h1>
+      <p>카드를 누르면 본문이 크게 열려요.</p></div>
+      <button class="btn btn-ghost head-action" data-action="hide-remaining">숨기기</button></div>
       ${remainingCards()}`;
   }
 
@@ -272,17 +291,17 @@
     return `
       <div class="settings">
         <section>
-          <h2>학생 화면 주소</h2>
+          <h2>${icon('link')}학생 화면 주소</h2>
           <p class="url">${esc(studentUrl)}</p>
         </section>
         <section>
-          <h2>자료 점검</h2>
+          <h2>${icon('check')}자료 점검</h2>
           ${problems.length
             ? `<ul class="problems">${problems.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>`
             : `<p class="muted">자료 ${ITEMS.length}개, 분류에 문제가 없어요.</p>`}
         </section>
         <section class="danger-zone">
-          <h2>초기화</h2>
+          <h2>${icon('trash')}초기화</h2>
           <p>모든 학생의 가져간 자료와 정리를 지우고 친구 카드를 닫아요. 리허설 뒤나 다른 반 수업 전에 쓰세요.</p>
           <button class="btn btn-danger btn-large" data-action="reset">전체 초기화</button>
         </section>
@@ -297,14 +316,15 @@
     }
     modalRoot.innerHTML = `
       <div class="overlay" data-action="close-item">
-        <div class="modal" role="dialog" aria-modal="true">
-          <button class="close" data-action="close-item" aria-label="닫기">✕</button>
+        <div class="modal detail-modal" role="dialog" aria-modal="true">
+          <button class="close" data-action="close-item" aria-label="닫기">${icon('x')}</button>
           <div class="detail">
-            <img src="${esc(it.image)}" alt="">
+            <div class="detail-img"><img src="${esc(it.image)}" alt=""></div>
             <div class="content">
+              <span class="kicker">자료 ${ITEM_NO[it.id]}</span>
               <h2>${esc(it.title)}</h2>
               <p class="body">${esc(it.body)}</p>
-              <p class="meta">출처: ${esc(it.source)} · ${esc(it.date)}</p>
+              <div class="meta"><span>${icon('source')}${esc(it.source)}</span><span>${icon('calendar')}${esc(it.date)}</span></div>
             </div>
           </div>
         </div>
@@ -321,7 +341,10 @@
       body = `
         <p class="b-kicker">탐구 질문</p>
         <h1 class="b-question">지구촌을 위협하는 문제에는<br>어떤 것들이 있을까요?</h1>
-        <div class="b-groups">${GROUPS.map((g) => `<span>${esc(g.name)}</span>`).join('')}</div>`;
+        <div class="b-groups">${GROUPS.map((g) => {
+          const st = GROUP_STYLE[g.id];
+          return `<span style="--g:${st.color};--gs:${st.soft}">${icon(st.icon)}${esc(g.name)}</span>`;
+        }).join('')}</div>`;
     } else if (stage.id === 'act1') {
       body = `
         <p class="b-kicker">활동 1</p>
@@ -347,7 +370,7 @@
       const teams = NUMS.map((n) => `
         <div class="b-team">
           <h3>${n}번 모둠</h3>
-          <ul>${GROUPS.map((g) => `<li>${esc(g.name)} ${n}번</li>`).join('')}</ul>
+          <ul>${GROUPS.map((g) => `<li style="--g:${GROUP_STYLE[g.id].color}">${icon(GROUP_STYLE[g.id].icon)}${esc(g.name)} ${n}번</li>`).join('')}</ul>
         </div>`).join('');
       body = `
         <p class="b-kicker">활동 3</p>
@@ -369,7 +392,7 @@
         <h1>아무도 가져가지 않은 자료</h1>
         ${state.boardReveal
           ? `${remainingCards()}<p class="b-next">다음 시간에는 지구촌 문제를 해결하기 위한 노력을 알아봅시다.</p>`
-          : `<div class="reveal"><button class="btn btn-large" data-action="board-reveal">남은 자료 보기</button></div>`}`;
+          : `<div class="reveal"><button class="btn btn-large btn-sun" data-action="board-reveal">${icon('eye')}남은 자료 보기</button></div>`}`;
     }
 
     const dots = BOARD_STAGES.map((s, i) => `
@@ -380,10 +403,10 @@
         ${stage.timer ? timerHtml() : ''}
         <div class="b-body">${body}</div>
         <nav class="b-nav">
-          <button class="btn btn-ghost" data-action="board-prev" ${state.board === 0 ? 'disabled' : ''}>◀ 이전</button>
+          <button class="btn btn-ghost" data-action="board-prev" ${state.board === 0 ? 'disabled' : ''}>${icon('arrowLeft')}이전</button>
           <div class="b-dots">${dots}</div>
-          <button class="btn btn-ghost" data-action="board-next" ${state.board === BOARD_STAGES.length - 1 ? 'disabled' : ''}>다음 ▶</button>
-          <button class="btn btn-ghost b-exit" data-action="board-exit">나가기</button>
+          <button class="btn" data-action="board-next" ${state.board === BOARD_STAGES.length - 1 ? 'disabled' : ''}>다음${icon('arrowRight')}</button>
+          <button class="btn-text b-exit" data-action="board-exit">${icon('x')}나가기</button>
         </nav>
       </div>`;
     renderItemModal();
@@ -416,8 +439,8 @@
         <div id="timer-display" class="t-display">${left === 0 ? '시간 끝!' : fmt(left)}</div>
         <div class="t-controls">
           ${presets}
-          <button data-action="timer-toggle">${state.timer.running ? '⏸' : '▶'}</button>
-          <button data-action="timer-reset">↺</button>
+          <button data-action="timer-toggle" aria-label="${state.timer.running ? '멈춤' : '시작'}">${icon(state.timer.running ? 'pause' : 'play')}</button>
+          <button data-action="timer-reset" aria-label="다시">${icon('reset')}</button>
         </div>
       </div>`;
   }
@@ -443,7 +466,7 @@
       await Store.setSetting('friendsOpen', next);
       toast(next ? '학생 화면에서 친구 카드가 열렸어요.' : '친구 카드를 닫았어요.');
     } catch (e) {
-      toast('바꾸지 못했어요. 인터넷 연결을 확인해 주세요.');
+      toast('바꾸지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
     }
   }
 
@@ -458,7 +481,7 @@
       state.boardReveal = false;
       toast('초기화했어요.');
     } catch (e) {
-      toast('초기화하지 못했어요. 인터넷 연결을 확인해 주세요.');
+      toast('초기화하지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
     }
   }
 
@@ -477,7 +500,7 @@
       render();
     } else {
       input.value = '';
-      toast('PIN이 맞지 않아요.');
+      toast('PIN이 맞지 않아요.', 'error');
     }
   });
 
