@@ -302,7 +302,8 @@
       <div class="meta">
         <span>${icon('source')}${esc(it.source)}</span>
         <span>${icon('calendar')}${esc(it.date)}</span>
-      </div>`;
+      </div>
+      ${it.imageCredit ? `<p class="photo-credit">사진: ${esc(it.imageCredit)}</p>` : ''}`;
   }
 
   function emptyState(img, title, desc, action = '') {
