@@ -1,0 +1,31 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "claims": {
+      ".read": true,
+      ".write": true,
+      "$sid": {
+        ".validate": "$sid.matches(/^(resource|climate|ecosystem|refugee)-[1-5]$/) && newData.isString() && newData.val().length <= 60"
+      }
+    },
+    "entries": {
+      ".read": true,
+      ".write": true,
+      "$sid": {
+        ".validate": "$sid.matches(/^(resource|climate|ecosystem|refugee)-[1-5]$/) && newData.hasChildren(['itemId', 'text', 'updatedAt'])",
+        "itemId": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "text": { ".validate": "newData.isString() && newData.val().length <= 500" },
+        "updatedAt": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "settings": {
+      ".read": true,
+      ".write": true,
+      "$key": {
+        ".validate": "newData.isString() || newData.isBoolean() || newData.isNumber()"
+      }
+    }
+  }
+}

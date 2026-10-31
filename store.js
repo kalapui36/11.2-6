@@ -1,7 +1,10 @@
 // 데이터 저장소. 학생 화면과 교사 화면이 함께 사용한다.
-// 지금(1단계)은 브라우저 localStorage에 저장하는 임시 저장소다.
-// 같은 브라우저의 여러 탭끼리는 실시간으로 반영되므로 탭 여러 개로 시험해 볼 수 있다.
-// 2단계에서 같은 사용법(subscribe, claim, release)을 지키는 Firebase 저장소로 바꾼다.
+// firebase-config.js에 설정값이 있으면 Firebase Realtime Database를,
+// 없으면 이 브라우저의 localStorage를 쓰는 시험 모드를 쓴다(같은 브라우저의 탭끼리만 반영).
+//
+// 데이터 구조
+//   /claims/{studentId}  = itemId
+//   /entries/{studentId} = { itemId, text, updatedAt }
 
 function makeStudentId(group, num) {
   return `${group}-${num}`;
@@ -22,7 +25,21 @@ function findGroupmateHolder(claims, studentId, itemId) {
   return null;
 }
 
-const Store = (() => {
+// 인터넷이 끊겨 응답이 없으면 기다리지 않고 실패로 처리한다.
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
+}
+
+// 두 저장소 모두 같은 사용법을 지킨다.
+//   subscribe(fn)        fn({ claims, entries })를 지금 한 번, 이후 바뀔 때마다 부른다.
+//   onConnection(fn)     fn(true/false) 서버 연결 상태
+//   claim(sid, itemId)   성공 { ok: true }, 같은 모둠이 이미 가짐 { ok: false, holder }
+//   release(sid)         자료를 내려놓고 작성한 정리도 함께 지운다.
+
+function createLocalStore() {
   const KEY = 'gi-local-db';
   const listeners = new Set();
 
@@ -43,14 +60,15 @@ const Store = (() => {
   });
 
   return {
-    // fn({ claims, entries })를 지금 한 번, 이후 바뀔 때마다 부른다.
+    mode: 'local',
     subscribe(fn) {
       listeners.add(fn);
       fn(read());
       return () => listeners.delete(fn);
     },
-
-    // 성공: { ok: true }, 같은 모둠이 이미 가짐: { ok: false, holder }
+    onConnection(fn) {
+      fn(true);
+    },
     async claim(studentId, itemId) {
       const db = read();
       const holder = findGroupmateHolder(db.claims, studentId, itemId);
@@ -60,8 +78,6 @@ const Store = (() => {
       write(db);
       return { ok: true };
     },
-
-    // 자료를 내려놓으면 작성한 정리도 함께 지운다.
     async release(studentId) {
       const db = read();
       delete db.claims[studentId];
@@ -70,4 +86,68 @@ const Store = (() => {
       return { ok: true };
     },
   };
-})();
+}
+
+function createFirebaseStore(config) {
+  firebase.initializeApp(config);
+  const db = firebase.database();
+  const data = { claims: {}, entries: {} };
+  const listeners = new Set();
+  const loaded = { claims: false, entries: false };
+
+  function emit() {
+    if (!loaded.claims || !loaded.entries) return;
+    const snapshot = { claims: { ...data.claims }, entries: { ...data.entries } };
+    listeners.forEach((fn) => fn(snapshot));
+  }
+
+  ['claims', 'entries'].forEach((key) => {
+    db.ref(key).on('value', (snap) => {
+      data[key] = snap.val() || {};
+      loaded[key] = true;
+      emit();
+    });
+  });
+
+  return {
+    mode: 'firebase',
+    subscribe(fn) {
+      listeners.add(fn);
+      if (loaded.claims && loaded.entries) fn({ claims: { ...data.claims }, entries: { ...data.entries } });
+      return () => listeners.delete(fn);
+    },
+    onConnection(fn) {
+      db.ref('.info/connected').on('value', (snap) => fn(snap.val() === true));
+    },
+
+    // 여러 크롬북에서 동시에 눌러도 같은 모둠 중복이 생기지 않도록 /claims 전체를 트랜잭션으로 바꾼다.
+    async claim(studentId, itemId) {
+      let holder = null;
+      let prev = null;
+      const result = await withTimeout(db.ref('claims').transaction((claims) => {
+        claims = claims || {};
+        holder = findGroupmateHolder(claims, studentId, itemId);
+        if (holder) return undefined;   // 중단
+        prev = claims[studentId] || null;
+        claims[studentId] = itemId;
+        return claims;
+      }, undefined, false));
+
+      if (!result.committed) return { ok: false, holder };
+      if (prev !== itemId) await withTimeout(db.ref(`entries/${studentId}`).remove());
+      return { ok: true };
+    },
+
+    async release(studentId) {
+      await withTimeout(db.ref().update({
+        [`claims/${studentId}`]: null,
+        [`entries/${studentId}`]: null,
+      }));
+      return { ok: true };
+    },
+  };
+}
+
+const Store = (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.databaseURL)
+  ? createFirebaseStore(FIREBASE_CONFIG)
+  : createLocalStore();

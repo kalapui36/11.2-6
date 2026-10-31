@@ -149,6 +149,7 @@
       <header class="topbar">
         <div class="topbar-inner">
           <span class="brand">🌏 지구촌 문제 자료 탐색</span>
+          ${Store.mode === 'local' ? '<span class="mode-note">시험 모드: 이 브라우저에만 저장돼요</span>' : ''}
           <span class="me">${esc(group.name)} · <span class="num">${state.me.num}번</span></span>
           <button class="btn btn-ghost reset" data-action="reset-me">다시 고르기</button>
         </div>
@@ -266,7 +267,7 @@
       if (res.ok) toast('자료를 가져갔어요.');
       else toast(`우리 모둠 ${parseStudentId(res.holder).num}번이 먼저 가져갔어요.`);
     } catch (e) {
-      toast('저장하지 못했어요. 다시 눌러 주세요.');
+      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
     } finally {
       state.busy = false;
       render();
@@ -287,7 +288,7 @@
       await Store.release(myId());
       toast('자료를 내려놓았어요.');
     } catch (e) {
-      toast('저장하지 못했어요. 다시 눌러 주세요.');
+      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
     } finally {
       state.busy = false;
       render();
@@ -356,6 +357,15 @@
       state.openItemId = null;
       renderDetail();
     }
+  });
+
+  // 연결이 3초 넘게 끊겨 있을 때만 알림 띠를 보여 준다(처음 연결 중에는 숨김).
+  const offlineEl = document.getElementById('offline');
+  let offlineTimer = null;
+  Store.onConnection((connected) => {
+    clearTimeout(offlineTimer);
+    if (connected) offlineEl.hidden = true;
+    else offlineTimer = setTimeout(() => { offlineEl.hidden = false; }, 3000);
   });
 
   Store.subscribe((db) => {
