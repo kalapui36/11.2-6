@@ -272,6 +272,7 @@
             <h2>${esc(it.title)}</h2>
             <p class="body">${esc(it.body)}</p>
             ${metaHtml(it)}
+            ${state.db.settings.linksOpen ? moreLink(it) : ''}
           </div>
         </article>
         <section class="writer">
@@ -439,6 +440,7 @@
               <h2>${esc(it.title)}</h2>
               <p class="body">${esc(it.body)}</p>
               ${metaHtml(it)}
+              ${state.db.settings.linksOpen ? moreLink(it) : ''}
             </div>
           </div>
           <div class="actions">${actions}</div>

@@ -136,6 +136,7 @@
   function renderDashboard() {
     const c = counts();
     const friendsOpen = !!state.db.settings.friendsOpen;
+    const linksOpen = !!state.db.settings.linksOpen;
     const checks = allStudentIds().filter(checkReason).length;
     const nav = [
       ['status', 'grid', `현황판${checks ? ` <span class="pill warn">${checks}</span>` : ''}`],
@@ -168,6 +169,9 @@
           </div>
           <button class="switch ${friendsOpen ? 'on' : ''}" data-action="toggle-friends" aria-pressed="${friendsOpen}">
             ${icon(friendsOpen ? 'unlock' : 'lock')}<span>친구 보고서 ${friendsOpen ? '열림' : '닫힘'}</span><i></i>
+          </button>
+          <button class="switch ${linksOpen ? 'on' : ''}" data-action="toggle-links" aria-pressed="${linksOpen}">
+            ${icon('link')}<span>관련 자료 링크 ${linksOpen ? '보임' : '숨김'}</span><i></i>
           </button>
           <button class="btn btn-sun" data-action="board-open">${icon('board')}칠판 모드</button>
         </div>
@@ -302,7 +306,7 @@
         </section>
         <section class="danger-zone">
           <h2>${icon('trash')}초기화</h2>
-          <p>모든 학생의 가져간 자료와 정리를 지우고 친구 보고서를 닫아요. 리허설 뒤나 다른 반 수업 전에 쓰세요.</p>
+          <p>모든 학생의 가져간 자료와 정리를 지우고 친구 보고서와 관련 자료 링크를 닫아요. 리허설 뒤나 다른 반 수업 전에 쓰세요.</p>
           <button class="btn btn-danger btn-large" data-action="reset">전체 초기화</button>
         </section>
       </div>`;
@@ -325,6 +329,7 @@
               <h2>${esc(it.title)}</h2>
               <p class="body">${esc(it.body)}</p>
               <div class="meta"><span>${icon('source')}${esc(it.source)}</span><span>${icon('calendar')}${esc(it.date)}</span></div>
+              ${moreLink(it)}
             </div>
           </div>
         </div>
@@ -471,6 +476,16 @@
     }
   }
 
+  async function toggleLinks() {
+    const next = !state.db.settings.linksOpen;
+    try {
+      await Store.setSetting('linksOpen', next);
+      toast(next ? '학생 화면에 관련 자료 링크가 보여요.' : '관련 자료 링크를 숨겼어요.');
+    } catch (e) {
+      toast('바꾸지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
+    }
+  }
+
   async function resetAll() {
     const ok1 = await confirmBox('모든 학생의 자료와 정리를 지울까요?', '지운 내용은 되돌릴 수 없어요.', '지우기', 'btn btn-danger');
     if (!ok1) return;
@@ -518,6 +533,9 @@
         break;
       case 'toggle-friends':
         toggleFriends();
+        break;
+      case 'toggle-links':
+        toggleLinks();
         break;
       case 'show-remaining':
         state.showRemaining = true;

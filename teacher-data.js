@@ -3,9 +3,44 @@
 const TEACHER_PIN = '0000';   // 교사 화면 진입용 간단 PIN
 
 // 자료별 주제 분류(정답). 해결 노력 자료(type: 'effort')는 빈 배열.
+// 두 주제에 걸치는 자료는 수업 지도안의 정리 활동(두 문제에 함께 해당하는 사례)에 쓴다.
 const ITEM_TOPICS = {
-  'tuvalu':        ['climate', 'refugee'],
-  'sea-turtle':    ['ecosystem'],
-  'oil-price':     ['resource'],
-  'solar-village': [],
+  // 자원 및 에너지
+  'water':            ['resource'],
+  'rio-grande':       ['resource'],
+  'europe-gas':       ['resource'],
+  'nile':             ['resource'],
+  'rare-earth':       ['resource'],
+  'europe-water':     ['resource'],
+  'day-zero':         ['resource', 'climate'],
+  'aral':             ['ecosystem', 'resource'],
+  // 기후변화
+  'tuvalu':           ['climate', 'refugee'],
+  'hottest-year':     ['climate'],
+  'korea-summer':     ['climate'],
+  'apple':            ['climate'],
+  'blatten':          ['climate'],
+  'pakistan':         ['climate', 'refugee'],
+  'coral':            ['climate', 'ecosystem'],
+  'wildfire':         ['climate', 'ecosystem'],
+  // 생태계 파괴
+  'ghana-clothes':    ['ecosystem'],
+  'sea-turtle':       ['ecosystem'],
+  'garbage-patch':    ['ecosystem'],
+  'wildlife':         ['ecosystem'],
+  'bees':             ['ecosystem'],
+  'amazon':           ['ecosystem'],
+  // 난민
+  'displaced':        ['refugee'],
+  'sudan':            ['refugee'],
+  'rohingya':         ['refugee'],
+  'ukraine':          ['refugee'],
+  'climate-refugees': ['refugee', 'climate'],
+  // 해결 노력
+  'ozone':            [],
+  'renewables':       [],
+  'paris':            [],
+  'bear':             [],
+  'ocean-cleanup':    [],
+  'refugee-team':     [],
 };

@@ -55,6 +55,17 @@ function groupChip(groupId, label) {
   return `<span class="gchip" style="--g:${s.color};--gs:${s.soft}">${emblem(groupId)}${esc(label)}</span>`;
 }
 
+// 관련 자료 링크(새 창). 교사가 '관련 자료 링크'를 켰을 때만 학생 화면에 보인다.
+function moreLink(it) {
+  if (!it.link) return '';
+  return `
+    <a class="more-link" href="${esc(it.link.url)}" target="_blank" rel="noopener noreferrer">
+      ${icon('link')}
+      <span><b>관련 자료 더 보기</b><small>${esc(it.link.title)}</small></span>
+      ${icon('arrowRight')}
+    </a>`;
+}
+
 // 지구 마스코트. kind: 'guide' | 'cheer' | 'think'
 function mascot(kind, cls = '') {
   return `<img class="mascot ${cls}" src="${UI_IMG}mascot-${kind}.webp" alt="">`;

@@ -5,7 +5,8 @@
 // 데이터 구조
 //   /claims/{studentId}  = itemId
 //   /entries/{studentId} = { itemId, text, updatedAt }
-//   /settings/friendsOpen = true/false   (친구 카드 탭 열기, 교사가 바꿈)
+//   /settings/friendsOpen = true/false   (친구 보고서 탭 열기, 교사가 바꿈)
+//   /settings/linksOpen   = true/false   (자료 상세 화면의 관련 자료 링크 보이기, 교사가 바꿈)
 
 function makeStudentId(group, num) {
   return `${group}-${num}`;
@@ -102,7 +103,7 @@ function createLocalStore() {
     },
     async resetAll() {
       const db = read();
-      write({ claims: {}, entries: {}, settings: { ...db.settings, friendsOpen: false } });
+      write({ claims: {}, entries: {}, settings: { ...db.settings, friendsOpen: false, linksOpen: false } });
     },
   };
 }
@@ -191,6 +192,7 @@ function createFirebaseStore(config) {
         claims: null,
         entries: null,
         'settings/friendsOpen': false,
+        'settings/linksOpen': false,
       }));
     },
   };
