@@ -125,7 +125,7 @@
         <form class="pin" data-form="pin">
           <div class="brand-mark">${icon('lock')}</div>
           <h1>교사 화면</h1>
-          <p class="lead">지구촌 문제 자료 탐색 · 교사용</p>
+          <p class="lead">지구촌 탐사대 · 교사용</p>
           <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" autofocus>
           <button class="btn btn-large btn-block" type="submit">들어가기 ${icon('arrowRight')}</button>
         </form>
@@ -157,8 +157,8 @@
           <div class="brand">
             <span class="brand-mark sm">${icon('globe')}</span>
             <span class="brand-text">
-              <strong>교사 화면</strong>
-              <small>지구촌 문제 자료 탐색</small>
+              <strong>지구촌 탐사대 · 교사 화면</strong>
+              <small>현황을 확인하고 칠판 화면을 띄워요</small>
             </span>
           </div>
           ${Store.mode === 'local' ? '<span class="mode-note">시험 모드 · 이 브라우저에만 저장</span>' : ''}
@@ -167,7 +167,7 @@
             <span class="stat"><small>정리</small><b>${c.written}</b>/${TOTAL}</span>
           </div>
           <button class="switch ${friendsOpen ? 'on' : ''}" data-action="toggle-friends" aria-pressed="${friendsOpen}">
-            ${icon(friendsOpen ? 'unlock' : 'lock')}<span>친구 카드 ${friendsOpen ? '열림' : '닫힘'}</span><i></i>
+            ${icon(friendsOpen ? 'unlock' : 'lock')}<span>친구 보고서 ${friendsOpen ? '열림' : '닫힘'}</span><i></i>
           </button>
           <button class="btn btn-sun" data-action="board-open">${icon('board')}칠판 모드</button>
         </div>
@@ -197,7 +197,7 @@
           </td>`;
       }).join('');
       const st = GROUP_STYLE[g.id];
-      return `<tr><th class="gname" style="--g:${st.color};--gs:${st.soft}"><span class="gname-icon">${icon(st.icon)}</span>${esc(g.name)}</th>${cells}</tr>`;
+      return `<tr><th class="gname" style="--g:${st.color};--gs:${st.soft}">${emblem(g.id, 'gname-emblem')}${esc(g.name)}</th>${cells}</tr>`;
     }).join('');
 
     const checkList = allStudentIds()
@@ -302,7 +302,7 @@
         </section>
         <section class="danger-zone">
           <h2>${icon('trash')}초기화</h2>
-          <p>모든 학생의 가져간 자료와 정리를 지우고 친구 카드를 닫아요. 리허설 뒤나 다른 반 수업 전에 쓰세요.</p>
+          <p>모든 학생의 가져간 자료와 정리를 지우고 친구 보고서를 닫아요. 리허설 뒤나 다른 반 수업 전에 쓰세요.</p>
           <button class="btn btn-danger btn-large" data-action="reset">전체 초기화</button>
         </section>
       </div>`;
@@ -339,18 +339,19 @@
 
     if (stage.id === 'question') {
       body = `
+        <img class="b-cover" src="${UI_IMG}cover.webp" alt="">
         <p class="b-kicker">탐구 질문</p>
         <h1 class="b-question">지구촌을 위협하는 문제에는<br>어떤 것들이 있을까요?</h1>
         <div class="b-groups">${GROUPS.map((g) => {
           const st = GROUP_STYLE[g.id];
-          return `<span style="--g:${st.color};--gs:${st.soft}">${icon(st.icon)}${esc(g.name)}</span>`;
+          return `<span style="--g:${st.color};--gs:${st.soft}">${emblem(g.id)}${esc(g.name)}</span>`;
         }).join('')}</div>`;
     } else if (stage.id === 'act1') {
       body = `
         <p class="b-kicker">활동 1</p>
         <h1>우리 모둠 주제에 맞는 자료 찾기</h1>
         <ol class="b-steps">
-          <li>'자료 모음'에서 카드를 눌러 자료를 읽어요.</li>
+          <li>'탐사 자료실'에서 카드를 눌러 자료를 읽어요.</li>
           <li>우리 모둠 주제에 해당하는 자료를 <b>한 사람이 하나씩</b> 가져가요.</li>
           <li>우리 모둠 친구가 이미 가져간 자료는 가져갈 수 없어요.</li>
         </ol>
@@ -360,7 +361,7 @@
         <p class="b-kicker">활동 2</p>
         <h1>문제 상황과 심각성 정리하기</h1>
         <ol class="b-steps">
-          <li>'내 카드'에서 자료를 다시 읽어요.</li>
+          <li>'내 보고서'에서 자료를 다시 읽어요.</li>
           <li><b>어디에서 어떤 문제</b>가 일어나는지, <b>얼마나 심각한지</b> 1~2문장으로 써요.</li>
           <li>다 쓰면 <b>저장</b>을 눌러요.</li>
         </ol>
@@ -370,14 +371,14 @@
       const teams = NUMS.map((n) => `
         <div class="b-team">
           <h3>${n}번 모둠</h3>
-          <ul>${GROUPS.map((g) => `<li style="--g:${GROUP_STYLE[g.id].color}">${icon(GROUP_STYLE[g.id].icon)}${esc(g.name)} ${n}번</li>`).join('')}</ul>
+          <ul>${GROUPS.map((g) => `<li>${emblem(g.id)}${esc(g.name)} ${n}번</li>`).join('')}</ul>
         </div>`).join('');
       body = `
         <p class="b-kicker">활동 3</p>
-        <h1>같은 번호끼리 모여 설명하기</h1>
+        <h1>같은 번호끼리 모여 브리핑하기</h1>
         <div class="b-teams">${teams}</div>
         <ol class="b-steps compact">
-          <li>'내 카드'에서 <b>설명 모드</b>를 켜고 친구에게 보여 주며 설명해요.</li>
+          <li>'내 보고서'에서 <b>설명 모드</b>를 켜고 친구에게 보여 주며 브리핑해요.</li>
           <li>친구의 설명을 듣고 정리표를 채워요.</li>
         </ol>`;
     } else if (stage.id === 'overlap') {
@@ -464,7 +465,7 @@
     const next = !state.db.settings.friendsOpen;
     try {
       await Store.setSetting('friendsOpen', next);
-      toast(next ? '학생 화면에서 친구 카드가 열렸어요.' : '친구 카드를 닫았어요.');
+      toast(next ? '학생 화면에서 친구 보고서가 열렸어요.' : '친구 보고서를 닫았어요.');
     } catch (e) {
       toast('바꾸지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
     }

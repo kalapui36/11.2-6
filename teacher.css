@@ -11,8 +11,7 @@
 }
 .pill.warn { background: #ffe1cc; color: #a2470d; }
 .muted { color: var(--muted); }
-.btn-sun { background: var(--sun); color: var(--navy-900); box-shadow: 0 2px 0 #c9852a; }
-.btn-sun:hover:not(:disabled) { background: #e99c2b; }
+.btn-sun { --depth: #c47f22; background: var(--sun); color: var(--navy-900); }
 
 /* ---------- PIN ---------- */
 .pin-wrap {
@@ -109,15 +108,7 @@
 .board-table { width: 100%; border-collapse: separate; border-spacing: 0.5rem; table-layout: fixed; }
 .board-table thead th { font-size: 1rem; color: var(--muted); font-weight: 800; }
 .board-table .gname { width: 9rem; text-align: left; font-size: 0.95rem; line-height: 1.35; color: var(--g); }
-.gname-icon {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  margin-bottom: 0.3rem;
-  border-radius: 10px;
-  background: var(--gs);
-}
+.gname-emblem { display: block; width: 2.6rem; height: 2.6rem; margin-bottom: 0.3rem; }
 .cell {
   position: relative;
   vertical-align: top;
@@ -232,7 +223,8 @@ button.big-card:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
   font-weight: 800;
 }
 .b-body:has(.b-question) { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.b-question { font-size: 3.8rem !important; }
+.b-question { font-size: 3.6rem !important; }
+.b-cover { height: 30vh; margin: -1vh auto 1.5rem; filter: drop-shadow(0 14px 24px rgba(14, 36, 64, 0.2)); }
 .b-groups { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem; margin-top: 2.5rem; }
 .b-groups span {
   display: inline-flex;
@@ -279,7 +271,8 @@ button.big-card:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
 .b-team h3 { margin: 0 0 0.5rem; font-size: 1.6rem; color: var(--navy-900); }
 .b-team ul { margin: 0; padding: 0; list-style: none; font-size: 1.05rem; line-height: 1.9; }
 .b-team li { display: flex; align-items: center; gap: 0.4em; }
-.b-team li .ic { color: var(--g); }
+.b-team li .emblem { width: 1.6rem; height: 1.6rem; }
+.b-groups .emblem { width: 2.4rem; height: 2.4rem; }
 
 .b-screen .big-card h3 { font-size: 1.55rem; }
 .b-screen .gchip { font-size: 1.15rem; }

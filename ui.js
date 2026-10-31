@@ -37,7 +37,8 @@ function icon(name, cls = '') {
   return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name] || ''}</svg>`;
 }
 
-// 모둠별 색과 아이콘. 학생의 '자기 모둠' 표시와 교사 화면에만 쓴다(자료 카드에는 쓰지 않는다).
+// 모둠별 색, 아이콘, 엠블럼. 학생의 '자기 모둠' 표시와 교사 화면에만 쓴다(자료 카드에는 쓰지 않는다).
+const UI_IMG = 'images/ui/';
 const GROUP_STYLE = {
   resource:  { color: '#c27a0e', soft: '#fdf1dc', icon: 'bolt' },
   climate:   { color: '#cf4f33', soft: '#fde8e2', icon: 'thermo' },
@@ -45,9 +46,41 @@ const GROUP_STYLE = {
   refugee:   { color: '#6656b8', soft: '#ebe8f9', icon: 'home' },
 };
 
+function emblem(groupId, cls = '') {
+  return `<img class="emblem ${cls}" src="${UI_IMG}emblem-${groupId}.webp" alt="">`;
+}
+
 function groupChip(groupId, label) {
   const s = GROUP_STYLE[groupId];
-  return `<span class="gchip" style="--g:${s.color};--gs:${s.soft}">${icon(s.icon)}${esc(label)}</span>`;
+  return `<span class="gchip" style="--g:${s.color};--gs:${s.soft}">${emblem(groupId)}${esc(label)}</span>`;
+}
+
+// 지구 마스코트. kind: 'guide' | 'cheer' | 'think'
+function mascot(kind, cls = '') {
+  return `<img class="mascot ${cls}" src="${UI_IMG}mascot-${kind}.webp" alt="">`;
+}
+
+// 마스코트가 말풍선으로 안내하는 띠
+function guideBubble(text, kind = 'guide') {
+  return `<div class="guide-bubble">${mascot(kind)}<p>${text}</p></div>`;
+}
+
+// 저장처럼 기쁜 순간에 잠깐 떠오르는 칭찬 화면
+let celebrateTimer = null;
+function celebrate(title, sub = '') {
+  document.querySelector('.celebrate')?.remove();
+  const el = document.createElement('div');
+  el.className = 'celebrate';
+  el.innerHTML = `
+    <div class="celebrate-card">
+      ${mascot('cheer')}
+      <strong>${esc(title)}</strong>
+      ${sub ? `<span>${esc(sub)}</span>` : ''}
+    </div>`;
+  el.addEventListener('click', () => el.remove());
+  document.body.appendChild(el);
+  clearTimeout(celebrateTimer);
+  celebrateTimer = setTimeout(() => el.remove(), 1800);
 }
 
 // 모든 학생과 교사가 같은 순서로 보는 자료 순서와 번호(자료 01, 02 …)
@@ -97,7 +130,7 @@ function confirmBox(message, sub = '', okLabel = '네', okClass = 'btn') {
     wrap.style.zIndex = 150;
     wrap.innerHTML = `
       <div class="modal confirm" role="alertdialog" aria-modal="true">
-        <div class="confirm-icon ${danger ? 'danger' : ''}">${icon(danger ? 'alert' : 'question')}</div>
+        ${danger ? `<div class="confirm-icon danger">${icon('alert')}</div>` : mascot('think', 'confirm-mascot')}
         <p>${esc(message)}</p>
         ${sub ? `<p class="sub">${esc(sub)}</p>` : ''}
         <div class="buttons">

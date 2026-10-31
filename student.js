@@ -12,6 +12,7 @@
     tab: 'items',          // 'items' | 'mine' | 'friends'
     openItemId: null,      // 상세 화면에 열린 자료
     explain: false,        // 설명 모드
+    justClaimed: null,     // 방금 가져간 자료(도장 찍히는 움직임용)
     busy: false,
     draft: loadDraft(),    // { sid, itemId, text } 또는 null
     db: { claims: {}, entries: {}, settings: {} },
@@ -107,7 +108,7 @@
       return `
         <button class="gchoice" data-action="pick-group" data-group="${g.id}"
           aria-pressed="${group === g.id}" style="--g:${st.color};--gs:${st.soft}">
-          <span class="gchoice-icon">${icon(st.icon)}</span>
+          <span class="gchoice-icon">${emblem(g.id)}</span>
           <span class="gchoice-name">${esc(g.name)}</span>
           <span class="gchoice-check">${icon('check')}</span>
         </button>`;
@@ -119,21 +120,23 @@
     app.innerHTML = `
       <div class="entry">
         <section class="entry-hero">
-          <div class="brand-mark">${icon('globe')}</div>
           <p class="entry-kicker">6학년 사회 · 지구촌의 문제와 지속가능한 미래</p>
-          <h1>지구촌 문제<br>자료 탐색</h1>
+          <h1>지구촌 탐사대</h1>
+          <p class="entry-sub">세계 곳곳의 자료를 살펴보고, 지구촌을 위협하는 문제를 찾아내는 탐사를 시작해요.</p>
           <div class="entry-question">
             <span class="label">탐구 질문</span>
             <p>지구촌을 위협하는 문제에는 어떤 것들이 있을까요?</p>
           </div>
+          <img class="entry-cover" src="${UI_IMG}cover.webp" alt="">
         </section>
         <section class="entry-form">
+          ${guideBubble('탐사대원 등록부터 해요! <b>우리 모둠</b>과 <b>내 번호</b>를 골라 주세요.')}
           <div class="step-head"><span class="step-no">1</span><h2>우리 모둠을 골라요</h2></div>
           <div class="gchoice-list">${groupButtons}</div>
           <div class="step-head"><span class="step-no">2</span><h2>내 번호를 골라요</h2></div>
           <div class="nchoice-row">${numButtons}</div>
           <button class="btn btn-large btn-block start" data-action="start" ${group && num ? '' : 'disabled'}>
-            시작하기 ${icon('arrowRight')}
+            탐사 시작하기 ${icon('arrowRight')}
           </button>
         </section>
       </div>`;
@@ -144,9 +147,9 @@
     const friendsOpen = !!state.db.settings.friendsOpen;
     const mineDone = !!savedText(myId(), myItemId());
     const tabs = [
-      ['items', 'grid', '자료 모음', ''],
-      ['mine', 'card', '내 카드', myItemId() ? `<span class="tab-dot ${mineDone ? 'done' : ''}"></span>` : ''],
-      ['friends', friendsOpen ? 'users' : 'lock', '친구 카드', ''],
+      ['items', 'grid', '탐사 자료실', ''],
+      ['mine', 'card', '내 보고서', myItemId() ? `<span class="tab-dot ${mineDone ? 'done' : ''}"></span>` : ''],
+      ['friends', friendsOpen ? 'users' : 'lock', '친구 보고서', ''],
     ].map(([id, ic, label, extra]) => `
       <button class="tab" role="tab" data-action="tab" data-tab="${id}"
         aria-selected="${state.tab === id}">${icon(ic)}<span>${label}</span>${extra}</button>`).join('');
@@ -162,8 +165,8 @@
           <div class="brand">
             <span class="brand-mark sm">${icon('globe')}</span>
             <span class="brand-text">
-              <strong>지구촌 문제 자료 탐색</strong>
-              <small>6학년 사회 · 지구촌의 문제와 지속가능한 미래</small>
+              <strong>지구촌 탐사대</strong>
+              <small>6학년 사회 · 지구촌 문제 자료 탐색</small>
             </span>
           </div>
           ${Store.mode === 'local' ? '<span class="mode-note">시험 모드 · 이 브라우저에만 저장</span>' : ''}
@@ -177,7 +180,7 @@
       <main>${content}</main>`;
   }
 
-  function pageHead(step, title, desc) {
+  function pageHead(step, title, desc, side = '') {
     return `
       <div class="page-head">
         <span class="step-pill">${step}</span>
@@ -185,6 +188,23 @@
           <h1>${title}</h1>
           <p>${desc}</p>
         </div>
+        ${side}
+      </div>`;
+  }
+
+  // 우리 모둠이 자료를 몇 개 모았는지 (다른 모둠 정보는 보이지 않는다)
+  function groupProgress() {
+    const nums = Array.from({ length: MEMBERS_PER_GROUP }, (_, i) => i + 1);
+    const got = nums.filter((n) => itemsById[state.db.claims[makeStudentId(state.me.group, n)]]);
+    const dots = nums.map((n) => `<i class="${got.includes(n) ? 'on' : ''} ${n === state.me.num ? 'me' : ''}">${n}</i>`).join('');
+    return `
+      <div class="team-progress" style="--g:${GROUP_STYLE[state.me.group].color}">
+        ${emblem(state.me.group)}
+        <div>
+          <small>우리 모둠 수집</small>
+          <b>${got.length} / ${MEMBERS_PER_GROUP}</b>
+        </div>
+        <span class="team-dots">${dots}</span>
       </div>`;
   }
 
@@ -197,7 +217,11 @@
       let badge = '';
       if (id === mine) {
         cls += ' is-mine';
-        badge = `<span class="badge mine">${icon('check')}내 자료</span>`;
+        badge = `
+          <span class="stamp ${state.justClaimed === id ? 'just' : ''}">
+            <img src="${UI_IMG}stamp.webp" alt="">
+            <b>수집 완료</b>
+          </span>`;
       } else if (mateNum) {
         cls += ' is-mate';
         badge = `<span class="badge mate">우리 모둠 ${mateNum}번</span>`;
@@ -215,15 +239,16 @@
     }).join('');
 
     return `
-      ${pageHead('활동 1', '우리 모둠 주제에 맞는 자료 찾기', '카드를 눌러 자료를 읽고, 우리 모둠 주제에 해당하는 자료를 한 사람이 하나씩 가져가요.')}
+      ${pageHead('활동 1', '우리 모둠 주제에 맞는 자료 찾기', '카드를 눌러 자료를 읽고, 우리 모둠 주제에 해당하는 자료를 한 사람이 하나씩 가져가요.', groupProgress())}
+      ${mine ? '' : guideBubble('카드를 눌러 자료를 꼼꼼히 읽어 봐요. <b>어떤 문제</b>가 일어나고 있나요?')}
       <div class="grid">${cards}</div>`;
   }
 
   function renderMine() {
     const id = myItemId();
     if (!id) {
-      return emptyState('card', '아직 가져간 자료가 없어요', "'자료 모음'에서 우리 모둠 주제에 맞는 자료를 골라 가져가세요.",
-        `<button class="btn" data-action="tab" data-tab="items">${icon('grid')}자료 모음으로 가기</button>`);
+      return emptyState('empty-bag', '탐사 가방이 비어 있어요', "'탐사 자료실'에서 우리 모둠 주제에 맞는 자료를 골라 가져오세요.",
+        `<button class="btn btn-large" data-action="tab" data-tab="items">${icon('grid')}탐사 자료실로 가기</button>`);
     }
     const it = itemsById[id];
     const text = currentText();
@@ -236,7 +261,7 @@
       <li class="${done ? 'done' : ''}"><span>${done ? icon('check') : i + 1}</span>${label}</li>`).join('');
 
     return `
-      ${pageHead('활동 2', '문제 상황과 심각성 정리하기', '자료를 다시 읽고, 어디에서 어떤 문제가 일어나는지와 얼마나 심각한지를 1~2문장으로 써요.')}
+      ${pageHead('활동 2', '탐사 보고서 쓰기', '자료를 다시 읽고, 어디에서 어떤 문제가 일어나는지와 얼마나 심각한지를 1~2문장으로 써요.')}
       <div class="mine-layout">
         <article class="paper">
           <div class="paper-img">
@@ -251,7 +276,7 @@
         </article>
         <section class="writer">
           <ol class="steps">${steps}</ol>
-          <label for="entry-text">${icon('pencil')}나의 정리</label>
+          <label for="entry-text">${icon('pencil')}나의 탐사 보고</label>
           <div class="guide">
             <span>어디에서?</span><span>어떤 문제가?</span><span>얼마나 심각한가?</span>
           </div>
@@ -266,7 +291,7 @@
               ${!isDirty() || !text.trim() || state.busy ? 'disabled' : ''}>${icon('save')}저장</button>
             <button class="btn btn-ghost btn-large" data-action="explain">${icon('present')}설명 모드</button>
           </div>
-          <p class="writer-tip">활동 3에서 친구에게 보여 줄 때 '설명 모드'를 켜요.</p>
+          <p class="writer-tip">활동 3에서 친구에게 브리핑할 때 '설명 모드'를 켜요.</p>
         </section>
       </div>`;
   }
@@ -279,10 +304,10 @@
       </div>`;
   }
 
-  function emptyState(ic, title, desc, action = '') {
+  function emptyState(img, title, desc, action = '') {
     return `
       <div class="empty">
-        <div class="empty-icon">${icon(ic)}</div>
+        <img class="empty-img" src="${UI_IMG}${img}.webp" alt="">
         <h2>${title}</h2>
         <p>${desc}</p>
         ${action}
@@ -312,7 +337,7 @@
 
   function renderFriends() {
     if (!state.db.settings.friendsOpen) {
-      return emptyState('lock', '친구 카드는 아직 잠겨 있어요', '활동 3이 끝나면 선생님이 열어 주실 거예요.');
+      return emptyState('locked-chest', '친구 보고서는 아직 잠겨 있어요', '활동 3이 끝나면 선생님이 상자를 열어 주실 거예요.');
     }
     const sections = GROUPS.map((g) => {
       const st = GROUP_STYLE[g.id];
@@ -342,12 +367,12 @@
       }).join('');
       return `
         <section class="fgroup" style="--g:${st.color};--gs:${st.soft}">
-          <h2><span class="fgroup-icon">${icon(st.icon)}</span>${esc(g.name)} 모둠</h2>
+          <h2>${emblem(g.id, 'fgroup-emblem')}${esc(g.name)} 모둠</h2>
           <div class="fgrid">${cards}</div>
         </section>`;
     }).join('');
     return `
-      ${pageHead('정리', '친구 카드 살펴보기', '친구들이 정리한 내용을 읽고 정리표의 빈칸을 채워요.')}
+      ${pageHead('정리', '친구 보고서 살펴보기', '친구들이 정리한 내용을 읽고 정리표의 빈칸을 채워요.')}
       ${sections}`;
   }
 
@@ -439,7 +464,10 @@
       const res = await Store.claim(myId(), id);
       if (res.ok) {
         setDraft(null);
-        toast('자료를 가져갔어요.');
+        state.justClaimed = id;
+        state.openItemId = null;
+        toast('자료를 수집했어요! 내 보고서에서 정리해 봐요.');
+        setTimeout(() => { state.justClaimed = null; }, 1200);
       }
       else toast(`우리 모둠 ${parseStudentId(res.holder).num}번이 먼저 가져갔어요.`, 'error');
     } catch (e) {
@@ -485,7 +513,7 @@
     try {
       await Store.saveEntry(myId(), itemId, text);
       setDraft(null);
-      toast('저장했어요.');
+      celebrate('보고서를 저장했어요!', "활동 3에서 '설명 모드'로 친구에게 브리핑해요.");
     } catch (e) {
       toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.', 'error');
     } finally {
