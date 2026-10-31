@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>교사 화면 · 지구촌 문제 자료 탐색</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="teacher.css">
+</head>
+<body class="teacher">
+  <div id="offline" class="offline" hidden>인터넷 연결이 끊겼어요. 다시 연결되면 자동으로 이어집니다.</div>
+  <div id="app"></div>
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="data.js"></script>
+  <script src="teacher-data.js"></script>
+  <script src="store.js"></script>
+  <script src="ui.js"></script>
+  <script src="teacher.js"></script>
+</body>
+</html>

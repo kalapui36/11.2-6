@@ -41,6 +41,7 @@ function withTimeout(promise, ms = 8000) {
 //   release(sid)         자료를 내려놓고 작성한 정리도 함께 지운다.
 //   saveEntry(sid, itemId, text)  정리 저장
 //   setSetting(key, value)        교사 설정 저장
+//   resetAll()                    모든 claims, entries를 지우고 친구 카드를 닫는다.
 
 function createLocalStore() {
   const KEY = 'gi-local-db';
@@ -98,6 +99,10 @@ function createLocalStore() {
       const db = read();
       db.settings[key] = value;
       write(db);
+    },
+    async resetAll() {
+      const db = read();
+      write({ claims: {}, entries: {}, settings: { ...db.settings, friendsOpen: false } });
     },
   };
 }
@@ -179,6 +184,14 @@ function createFirebaseStore(config) {
 
     async setSetting(key, value) {
       await withTimeout(db.ref(`settings/${key}`).set(value));
+    },
+
+    async resetAll() {
+      await withTimeout(db.ref().update({
+        claims: null,
+        entries: null,
+        'settings/friendsOpen': false,
+      }));
     },
   };
 }

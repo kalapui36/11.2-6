@@ -20,7 +20,6 @@
 
   const app = document.getElementById('app');
   const modalRoot = document.getElementById('modal-root');
-  const toastEl = document.getElementById('toast');
 
   // ---------- 도움 함수 ----------
   function seededShuffle(arr, seed) {
@@ -38,12 +37,6 @@
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
-  }
-
-  function esc(s) {
-    return String(s ?? '').replace(/[&<>"']/g, (c) => (
-      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-    ));
   }
 
   function loadMe() {
@@ -101,40 +94,6 @@
   function mateNumFor(itemId) {
     const holder = findGroupmateHolder(state.db.claims, myId(), itemId);
     return holder ? parseStudentId(holder).num : null;
-  }
-
-  let toastTimer = null;
-  function toast(msg) {
-    toastEl.textContent = msg;
-    toastEl.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toastEl.hidden = true; }, 2500);
-  }
-
-  // 확인 창. 예를 누르면 true.
-  function confirmBox(message, sub = '', okLabel = '네', okClass = 'btn') {
-    return new Promise((resolve) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'overlay';
-      wrap.style.zIndex = 150;
-      wrap.innerHTML = `
-        <div class="modal confirm" role="alertdialog" aria-modal="true">
-          <p>${esc(message)}</p>
-          ${sub ? `<p class="sub">${esc(sub)}</p>` : ''}
-          <div class="buttons">
-            <button class="btn btn-ghost btn-large" data-answer="no">아니요</button>
-            <button class="${okClass} btn-large" data-answer="yes">${esc(okLabel)}</button>
-          </div>
-        </div>`;
-      wrap.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-answer]');
-        if (!btn && e.target !== wrap) return;
-        wrap.remove();
-        resolve(btn?.dataset.answer === 'yes');
-      });
-      document.body.appendChild(wrap);
-      wrap.querySelector('[data-answer="yes"]').focus();
-    });
   }
 
   // ---------- 그리기 ----------
