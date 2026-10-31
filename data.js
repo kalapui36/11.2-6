@@ -196,7 +196,8 @@ const ITEMS = [
   {
     id: 'ghana-clothes',
     title: '강과 바다를 뒤덮은 헌 옷',
-    image: 'images/placeholder-5.svg',
+    image: 'images/items/ghana-clothes.webp',
+    imageCredit: '가나 아크라 해변의 쓰레기, Muntaka Chasant, CC BY-SA 4.0, 위키미디어 공용',
     body: '아프리카 가나의 수도 아크라에는 세계 여러 나라에서 버린 헌 옷이 모이는 큰 중고 시장이 있습니다. 이곳에 들어오는 옷의 절반 정도는 상태가 나빠 팔 수 없어 버려지고, 쓰레기장이 가득 차자 옷들이 강에 버려지고 있습니다. 강을 따라 흘러간 옷이 바닷가를 뒤덮으면서, 어민들은 가까운 바다에서 더 이상 물고기가 잡히지 않는다고 말합니다. 옷에서 나온 염료와 작은 플라스틱 섬유도 바다로 퍼지고 있습니다.',
     source: 'MBC',
     date: '2024. 3.',
