@@ -1,6 +1,8 @@
 // 학생 화면
 (() => {
   const ME_KEY = 'gi-student';
+  const DRAFT_KEY = 'gi-draft';   // 저장 전 쓰던 정리. 새로고침해도 남도록 브라우저에 보관
+  const TEXT_MAX = 300;
   const itemsById = Object.fromEntries(ITEMS.map((it) => [it.id, it]));
   const groupsById = Object.fromEntries(GROUPS.map((g) => [g.id, g]));
   const itemOrder = seededShuffle(ITEMS.map((it) => it.id), SHUFFLE_SEED);
@@ -10,8 +12,10 @@
     pick: { group: null, num: null },  // 입장 화면에서 고르는 중인 값
     tab: 'items',          // 'items' | 'mine' | 'friends'
     openItemId: null,      // 상세 화면에 열린 자료
+    explain: false,        // 설명 모드
     busy: false,
-    db: { claims: {}, entries: {} },
+    draft: loadDraft(),    // { sid, itemId, text } 또는 null
+    db: { claims: {}, entries: {}, settings: {} },
   };
 
   const app = document.getElementById('app');
@@ -48,6 +52,41 @@
       if (me && groupsById[me.group] && me.num >= 1 && me.num <= MEMBERS_PER_GROUP) return me;
     } catch (e) { /* 저장값이 깨졌으면 다시 고르게 한다 */ }
     return null;
+  }
+
+  function loadDraft() {
+    try {
+      return JSON.parse(localStorage.getItem(DRAFT_KEY));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setDraft(draft) {
+    state.draft = draft;
+    if (draft) localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    else localStorage.removeItem(DRAFT_KEY);
+  }
+
+  // 지금 자료에 대해 저장된 정리 글. 없으면 null.
+  function savedText(sid, itemId) {
+    const entry = state.db.entries[sid];
+    return entry && entry.itemId === itemId ? entry.text : null;
+  }
+
+  // 입력 칸에 보여 줄 글: 쓰던 글 → 저장된 글 → (문장 틀 대상이면) 문장 틀
+  function currentText() {
+    const sid = myId();
+    const itemId = myItemId();
+    const d = state.draft;
+    if (d && d.sid === sid && d.itemId === itemId) return d.text;
+    const saved = savedText(sid, itemId);
+    if (saved !== null) return saved;
+    return SUPPORT_STUDENTS.includes(sid) ? SENTENCE_FRAME : '';
+  }
+
+  function isDirty() {
+    return currentText() !== (savedText(myId(), myItemId()) ?? '');
   }
 
   function myId() {
@@ -105,8 +144,19 @@
       modalRoot.innerHTML = '';
       return;
     }
+    const active = document.activeElement;
+    const caret = active && active.id === 'entry-text'
+      ? [active.selectionStart, active.selectionEnd, active.scrollTop] : null;
     renderMain();
-    renderDetail();
+    renderOverlay();
+    if (caret) {
+      const ta = document.getElementById('entry-text');
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(caret[0], caret[1]);
+        ta.scrollTop = caret[2];
+      }
+    }
   }
 
   function renderEntry() {
@@ -135,7 +185,7 @@
     const tabs = [
       ['items', '자료 모음'],
       ['mine', '내 카드'],
-      ['friends', '친구 카드'],
+      ['friends', state.db.settings.friendsOpen ? '친구 카드' : '친구 카드 🔒'],
     ].map(([id, label]) => `
       <button class="tab" role="tab" data-action="tab" data-tab="${id}"
         aria-selected="${state.tab === id}">${label}</button>`).join('');
@@ -191,21 +241,107 @@
       return `<div class="empty">아직 가져간 자료가 없어요.<br>'자료 모음'에서 자료를 골라 가져가세요.</div>`;
     }
     const it = itemsById[id];
-    // 정리 입력, 설명 모드는 3단계에서 추가
+    const text = currentText();
     return `
-      <article class="mycard detail">
-        <img src="${esc(it.image)}" alt="">
-        <div class="content">
-          <h2>${esc(it.title)}</h2>
-          <p class="body">${esc(it.body)}</p>
-          <p class="meta">출처: ${esc(it.source)} · ${esc(it.date)}</p>
+      <article class="mycard">
+        <div class="detail">
+          <img src="${esc(it.image)}" alt="">
+          <div class="content">
+            <h2>${esc(it.title)}</h2>
+            <p class="body">${esc(it.body)}</p>
+            <p class="meta">출처: ${esc(it.source)} · ${esc(it.date)}</p>
+          </div>
+        </div>
+        <div class="writer">
+          <label for="entry-text">자료의 문제 상황과 심각성을 1~2문장으로 정리해 보세요.</label>
+          <textarea id="entry-text" rows="3" maxlength="${TEXT_MAX}"
+            placeholder="어디에서 어떤 문제가 일어나고 있나요? 얼마나 심각한가요?">${esc(text)}</textarea>
+          <div class="writer-bar">
+            <span id="save-state" class="save-state">${saveStateHtml()}</span>
+            <button class="btn btn-ghost btn-large" data-action="explain">설명 모드</button>
+            <button id="save-btn" class="btn btn-large" data-action="save"
+              ${!isDirty() || !text.trim() || state.busy ? 'disabled' : ''}>저장</button>
+          </div>
         </div>
       </article>`;
   }
 
+  function saveStateHtml() {
+    const entry = state.db.entries[myId()];
+    if (isDirty()) return '<span class="dirty">● 아직 저장하지 않았어요</span>';
+    if (entry && entry.itemId === myItemId()) {
+      const t = new Date(entry.updatedAt);
+      const hm = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+      return `<span class="saved">✔ 저장했어요 (${hm})</span>`;
+    }
+    return '';
+  }
+
+  // 입력할 때마다 화면 전체를 다시 그리지 않고 저장 상태만 바꾼다.
+  function updateSaveBar() {
+    const st = document.getElementById('save-state');
+    const btn = document.getElementById('save-btn');
+    if (st) st.innerHTML = saveStateHtml();
+    if (btn) btn.disabled = !isDirty() || !currentText().trim() || state.busy;
+  }
+
   function renderFriends() {
-    // 3단계에서 추가
-    return `<div class="empty">친구 카드는 준비 중이에요.</div>`;
+    if (!state.db.settings.friendsOpen) {
+      return `<div class="empty">🔒 친구 카드는 선생님이 열어 주시면 볼 수 있어요.</div>`;
+    }
+    const sections = GROUPS.map((g) => {
+      const cards = Array.from({ length: MEMBERS_PER_GROUP }, (_, i) => i + 1).map((n) => {
+        const sid = makeStudentId(g.id, n);
+        const itemId = state.db.claims[sid];
+        const it = itemsById[itemId];
+        if (!it) {
+          return `
+            <div class="fcard empty-card">
+              <span class="who">${n}번</span>
+              <p class="none">아직 자료를 가져가지 않았어요.</p>
+            </div>`;
+        }
+        const text = savedText(sid, itemId);
+        return `
+          <div class="fcard">
+            <span class="who">${n}번</span>
+            <img src="${esc(it.image)}" alt="" loading="lazy">
+            <div class="fbody">
+              <h3>${esc(it.title)}</h3>
+              ${text ? `<p>${esc(text)}</p>` : '<p class="none">아직 정리하지 않았어요.</p>'}
+            </div>
+          </div>`;
+      }).join('');
+      return `
+        <section class="fgroup">
+          <h2>${esc(g.name)} 모둠</h2>
+          <div class="fgrid">${cards}</div>
+        </section>`;
+    }).join('');
+    return `<p class="hint">친구들이 정리한 내용을 읽고 정리표를 보완해 보세요.</p>${sections}`;
+  }
+
+  function renderOverlay() {
+    if (state.explain) renderExplain();
+    else renderDetail();
+  }
+
+  // 직소 때 친구에게 보여 주는 전체 화면: 사진을 크게, 그 아래 내가 쓴 문장을 크게
+  function renderExplain() {
+    const it = itemsById[myItemId()];
+    if (!it) {
+      state.explain = false;
+      modalRoot.innerHTML = '';
+      return;
+    }
+    const text = savedText(myId(), it.id);
+    modalRoot.innerHTML = `
+      <div class="explain" role="dialog" aria-modal="true">
+        <button class="btn btn-ghost explain-close" data-action="close-explain">✕ 닫기</button>
+        <img src="${esc(it.image)}" alt="">
+        <h2>${esc(it.title)}</h2>
+        ${text ? `<p class="explain-text">${esc(text)}</p>` : '<p class="explain-text none">아직 정리를 저장하지 않았어요.</p>'}
+      </div>`;
   }
 
   function renderDetail() {
@@ -264,7 +400,10 @@
     renderDetail();
     try {
       const res = await Store.claim(myId(), id);
-      if (res.ok) toast('자료를 가져갔어요.');
+      if (res.ok) {
+        setDraft(null);
+        toast('자료를 가져갔어요.');
+      }
       else toast(`우리 모둠 ${parseStudentId(res.holder).num}번이 먼저 가져갔어요.`);
     } catch (e) {
       toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
@@ -286,6 +425,7 @@
     renderDetail();
     try {
       await Store.release(myId());
+      setDraft(null);
       toast('자료를 내려놓았어요.');
     } catch (e) {
       toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
@@ -295,6 +435,46 @@
     }
   }
 
+  async function save() {
+    const text = currentText().trim();
+    if (!text) return;
+    if (text.includes('___')) {
+      const ok = await confirmBox('빈칸(___)이 남아 있어요.', '빈칸을 채웠는지 확인해 보세요. 그래도 저장할까요?', '저장');
+      if (!ok) return;
+    }
+    const itemId = myItemId();
+    state.busy = true;
+    updateSaveBar();
+    try {
+      await Store.saveEntry(myId(), itemId, text);
+      setDraft(null);
+      toast('저장했어요.');
+    } catch (e) {
+      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function openExplain() {
+    if (isDirty() && currentText().trim()) {
+      const ok = await confirmBox('저장하지 않은 내용이 있어요.', '저장한 문장만 설명 모드에 나와요. 저장하고 열까요?', '저장하고 열기');
+      if (!ok) return;
+      await save();
+      if (isDirty()) return;   // 저장 실패
+    }
+    state.explain = true;
+    renderOverlay();
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+
+  function closeExplain() {
+    state.explain = false;
+    renderOverlay();
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  }
+
   async function resetMe() {
     const ok = await confirmBox('모둠과 번호를 다시 고를까요?', '', '다시 고르기');
     if (!ok) return;
@@ -302,6 +482,7 @@
     state.me = null;
     state.pick = { group: null, num: null };
     state.openItemId = null;
+    state.explain = false;
     state.tab = 'items';
     render();
   }
@@ -349,14 +530,38 @@
       case 'release':
         release();
         break;
+      case 'save':
+        save();
+        break;
+      case 'explain':
+        openExplain();
+        break;
+      case 'close-explain':
+        closeExplain();
+        break;
     }
   });
 
+  document.addEventListener('input', (e) => {
+    if (e.target.id !== 'entry-text') return;
+    setDraft({ sid: myId(), itemId: myItemId(), text: e.target.value });
+    updateSaveBar();
+  });
+
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.explain) {
+      closeExplain();
+      return;
+    }
     if (e.key === 'Escape' && state.openItemId && !document.querySelector('.confirm')) {
       state.openItemId = null;
       renderDetail();
     }
+  });
+
+  // 전체 화면을 Esc 등으로 빠져나오면 설명 모드도 닫는다.
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && state.explain) closeExplain();
   });
 
   // 연결이 3초 넘게 끊겨 있을 때만 알림 띠를 보여 준다(처음 연결 중에는 숨김).

@@ -5,6 +5,7 @@
 // 데이터 구조
 //   /claims/{studentId}  = itemId
 //   /entries/{studentId} = { itemId, text, updatedAt }
+//   /settings/friendsOpen = true/false   (친구 카드 탭 열기, 교사가 바꿈)
 
 function makeStudentId(group, num) {
   return `${group}-${num}`;
@@ -34,10 +35,12 @@ function withTimeout(promise, ms = 8000) {
 }
 
 // 두 저장소 모두 같은 사용법을 지킨다.
-//   subscribe(fn)        fn({ claims, entries })를 지금 한 번, 이후 바뀔 때마다 부른다.
+//   subscribe(fn)        fn({ claims, entries, settings })를 지금 한 번, 이후 바뀔 때마다 부른다.
 //   onConnection(fn)     fn(true/false) 서버 연결 상태
 //   claim(sid, itemId)   성공 { ok: true }, 같은 모둠이 이미 가짐 { ok: false, holder }
 //   release(sid)         자료를 내려놓고 작성한 정리도 함께 지운다.
+//   saveEntry(sid, itemId, text)  정리 저장
+//   setSetting(key, value)        교사 설정 저장
 
 function createLocalStore() {
   const KEY = 'gi-local-db';
@@ -45,7 +48,7 @@ function createLocalStore() {
 
   function read() {
     const db = JSON.parse(localStorage.getItem(KEY) || '{}');
-    return { claims: db.claims || {}, entries: db.entries || {} };
+    return { claims: db.claims || {}, entries: db.entries || {}, settings: db.settings || {} };
   }
   function emit(db) {
     listeners.forEach((fn) => fn(db));
@@ -85,23 +88,41 @@ function createLocalStore() {
       write(db);
       return { ok: true };
     },
+    async saveEntry(studentId, itemId, text) {
+      const db = read();
+      if (db.claims[studentId] !== itemId) throw new Error('not-claimed');
+      db.entries[studentId] = { itemId, text, updatedAt: Date.now() };
+      write(db);
+    },
+    async setSetting(key, value) {
+      const db = read();
+      db.settings[key] = value;
+      write(db);
+    },
   };
 }
 
 function createFirebaseStore(config) {
   firebase.initializeApp(config);
   const db = firebase.database();
-  const data = { claims: {}, entries: {} };
+  const KEYS = ['claims', 'entries', 'settings'];
+  const data = { claims: {}, entries: {}, settings: {} };
   const listeners = new Set();
-  const loaded = { claims: false, entries: false };
+  const loaded = {};
 
+  function ready() {
+    return KEYS.every((k) => loaded[k]);
+  }
+  function snapshot() {
+    return { claims: { ...data.claims }, entries: { ...data.entries }, settings: { ...data.settings } };
+  }
   function emit() {
-    if (!loaded.claims || !loaded.entries) return;
-    const snapshot = { claims: { ...data.claims }, entries: { ...data.entries } };
-    listeners.forEach((fn) => fn(snapshot));
+    if (!ready()) return;
+    const snap = snapshot();
+    listeners.forEach((fn) => fn(snap));
   }
 
-  ['claims', 'entries'].forEach((key) => {
+  KEYS.forEach((key) => {
     db.ref(key).on('value', (snap) => {
       data[key] = snap.val() || {};
       loaded[key] = true;
@@ -113,7 +134,7 @@ function createFirebaseStore(config) {
     mode: 'firebase',
     subscribe(fn) {
       listeners.add(fn);
-      if (loaded.claims && loaded.entries) fn({ claims: { ...data.claims }, entries: { ...data.entries } });
+      if (ready()) fn(snapshot());
       return () => listeners.delete(fn);
     },
     onConnection(fn) {
@@ -144,6 +165,20 @@ function createFirebaseStore(config) {
         [`entries/${studentId}`]: null,
       }));
       return { ok: true };
+    },
+
+    async saveEntry(studentId, itemId, text) {
+      // 저장 직전에 다른 자료로 바꾼 경우를 막는다.
+      if (data.claims[studentId] !== itemId) throw new Error('not-claimed');
+      await withTimeout(db.ref(`entries/${studentId}`).set({
+        itemId,
+        text,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP,
+      }));
+    },
+
+    async setSetting(key, value) {
+      await withTimeout(db.ref(`settings/${key}`).set(value));
     },
   };
 }
