@@ -20,7 +20,8 @@ const ITEMS = [
   {
     id: 'water',
     title: '네 명 중 한 명은 깨끗한 물을 마시지 못해요',
-    image: 'images/placeholder-1.svg',
+    image: 'images/items/water.webp',
+    imageCredit: 'Mstephen247, CC BY-SA 4.0, 위키미디어 공용',
     body: '유엔이 2024년에 발표한 보고서에 따르면, 세계에서 약 22억 명이 안전하게 관리되는 식수를 마시지 못하고 있습니다. 세계 인구의 절반 정도는 1년 가운데 얼마 동안 심각한 물 부족을 겪습니다. 물을 구하는 일은 주로 여성이 맡고 있어 부담이 큽니다. 유엔은 물 부족이 지역과 나라 사이의 다툼으로 이어질 수 있다고 경고했습니다.',
     source: '유엔 세계물개발보고서',
     date: '2024. 3.',
@@ -30,7 +31,8 @@ const ITEMS = [
   {
     id: 'rio-grande',
     title: '강물이 줄자 두 나라가 다퉈요',
-    image: 'images/placeholder-2.svg',
+    image: 'images/items/rio-grande.webp',
+    imageCredit: 'Scott Ehardt, 공공 저작물, 위키미디어 공용',
     body: '미국과 멕시코의 국경을 따라 흐르는 리오그란데강은 두 나라 사람들이 함께 쓰는 강입니다. 몇 년째 큰 가뭄이 이어지면서 강물이 크게 줄었고, 미국 텍사스의 농업용 저수지는 물이 10%도 남지 않을 만큼 말라붙었습니다. 두 나라는 1944년에 강물을 나누어 쓰기로 약속했지만, 물이 모자라자 서로 약속한 물을 내놓으라며 다투고 있습니다.',
     source: '한국일보, 경향신문',
     date: '2024. 6.',
@@ -40,7 +42,8 @@ const ITEMS = [
   {
     id: 'europe-gas',
     title: '가스가 끊기자 겨울이 걱정됐어요',
-    image: 'images/placeholder-3.svg',
+    image: 'images/items/europe-gas.webp',
+    imageCredit: 'Vuo, CC BY-SA 4.0, 위키미디어 공용',
     body: '2022년 러시아가 우크라이나를 침공한 뒤, 유럽으로 천연가스를 보내던 가스관의 공급량을 크게 줄였습니다. 유럽은 가스를 러시아에 많이 기대고 있었기 때문에 가스값이 1년 만에 10배 넘게 뛰었습니다. 가스는 난방을 하고 전기를 만드는 데 쓰이기 때문에, 많은 가정과 공장이 겨울을 앞두고 걱정에 빠졌습니다.',
     source: '한국경제 생글생글',
     date: '2022. 8.',
@@ -50,7 +53,8 @@ const ITEMS = [
   {
     id: 'nile',
     title: '강물을 두고 다투는 나라들',
-    image: 'images/placeholder-4.svg',
+    image: 'images/items/nile.webp',
+    imageCredit: '에티오피아 총리실, 공공 저작물, 위키미디어 공용',
     body: '아프리카의 나일강은 여러 나라를 지나 흐르고, 강 아래쪽 이집트는 필요한 물 대부분을 이 강에서 얻습니다. 2025년 강 위쪽의 에티오피아가 아프리카에서 가장 큰 댐을 완공하자, 이집트와 수단은 강물이 줄어들 수 있다며 강하게 반발했습니다. 나라마다 사람이 늘고 물이 더 필요해지면서, 강물을 어떻게 나눌지를 두고 갈등이 이어지고 있습니다.',
     source: '연합뉴스',
     date: '2025. 10.',
@@ -60,7 +64,8 @@ const ITEMS = [
   {
     id: 'rare-earth',
     title: '작지만 귀한 광물을 둘러싼 다툼',
-    image: 'images/placeholder-5.svg',
+    image: 'images/items/rare-earth.webp',
+    imageCredit: 'Peggy Greb/미국 농무부, 공공 저작물, 위키미디어 공용',
     body: '희토류는 스마트폰, 전기차, 반도체 같은 첨단 제품을 만드는 데 꼭 필요한 광물입니다. 그런데 희토류를 캐서 쓸 수 있게 만드는 일의 대부분을 중국이 하고 있습니다. 2025년 중국이 다른 나라로 희토류를 내보내려면 허가를 받도록 막자, 희토류의 약 80%를 중국에서 들여오는 우리나라 기업들도 걱정에 빠졌습니다. 자원을 가진 나라가 이를 무기처럼 쓰면서 나라 사이의 갈등이 커지고 있습니다.',
     source: '경향신문',
     date: '2025. 4.',
@@ -70,7 +75,8 @@ const ITEMS = [
   {
     id: 'europe-water',
     title: '땅속의 물이 줄어드는 유럽',
-    image: 'images/placeholder-6.svg',
+    image: 'images/items/europe-water.webp',
+    imageCredit: 'EU 코페르니쿠스 센티널-2, 출처 표시, 위키미디어 공용',
     body: '영국 연구진이 2002년부터 2024년까지의 인공위성 자료를 살펴보았더니, 유럽의 남쪽과 가운데 지역 대부분에서 땅속과 강, 호수에 저장된 물이 계속 줄어들고 있었습니다. 물이 줄면 마실 물뿐 아니라 농사에 쓸 물도 모자라게 됩니다. 과학자들은 물 부족이 사람들이 먹을 식량을 얻는 데에도 영향을 줄 수 있다고 걱정합니다.',
     source: '경향신문',
     date: '2025. 11.',
@@ -80,7 +86,8 @@ const ITEMS = [
   {
     id: 'day-zero',
     title: "수돗물이 끊기는 날, '데이 제로'",
-    image: 'images/placeholder-1.svg',
+    image: 'images/items/day-zero.webp',
+    imageCredit: 'Zaian, CC BY-SA 4.0, 위키미디어 공용',
     body: "남아프리카공화국의 큰 도시 케이프타운에 3년째 가뭄이 이어지면서, 2018년 초 도시에 물을 대는 댐의 물이 21%밖에 남지 않았습니다. 시는 수돗물이 모두 끊기는 날을 '데이 제로'라고 부르며 날짜를 셌습니다. 데이 제로가 오면 시민들은 정해진 곳에 줄을 서서 한 사람당 하루 25L의 물만 받아야 했습니다. 지구가 더워지면서 이런 큰 가뭄이 더 잦아질 수 있다는 걱정도 나옵니다.",
     source: '경향신문',
     date: '2018. 1.',
@@ -90,7 +97,8 @@ const ITEMS = [
   {
     id: 'aral',
     title: '바다였던 곳이 사막이 되었어요',
-    image: 'images/placeholder-2.svg',
+    image: 'images/items/aral.webp',
+    imageCredit: 'NASA, 공공 저작물, 위키미디어 공용',
     body: '중앙아시아의 아랄해는 한때 남한 면적의 3분의 2나 되는, 세계에서 네 번째로 큰 호수였습니다. 1960년대에 목화밭에 물을 대려고 호수로 흘러드는 두 강의 물줄기를 돌리자 호수가 빠르게 말라 갔습니다. 지금은 원래 크기의 10%도 남지 않았고, 물고기가 사라진 바닥은 소금 사막이 되었습니다. 말라붙은 바닥에서 날아오는 소금 먼지가 주민들의 건강까지 해치고 있습니다.',
     source: 'SBS, MBC',
     date: '2014. 10.',
@@ -100,7 +108,8 @@ const ITEMS = [
   {
     id: 'tuvalu',
     title: '섬이 바다에 잠기고 있어요',
-    image: 'images/placeholder-3.svg',
+    image: 'images/items/tuvalu.webp',
+    imageCredit: 'Lily-Anne Homasi/호주 외교통상부, CC BY 2.0, 위키미디어 공용',
     body: '남태평양의 섬나라 투발루는 섬들이 모두 바다보다 5m도 높지 않습니다. 바닷물이 높아지면서 9개 섬 가운데 2개는 이미 거의 물에 잠겼습니다. 살 곳을 잃을까 걱정하는 주민이 늘어, 2025년 이웃 나라 오스트레일리아로 옮겨 가 살 수 있는 비자를 신청한 사람이 일주일 만에 인구의 38%나 되었습니다.',
     source: 'SBS',
     date: '2025. 6.',
@@ -110,7 +119,8 @@ const ITEMS = [
   {
     id: 'hottest-year',
     title: '지구가 가장 뜨거웠던 해',
-    image: 'images/placeholder-4.svg',
+    image: 'images/items/hottest-year.webp',
+    imageCredit: 'NASA 과학시각화스튜디오, 공공 저작물, 위키미디어 공용',
     body: '세계기상기구는 2024년이 기록이 남아 있는 해 가운데 가장 더운 해였다고 발표했습니다. 지구 평균기온이 산업화 이전보다 약 1.55℃ 높아, 한 해 기온이 처음으로 1.5℃를 넘었습니다. 1.5℃는 세계 여러 나라가 넘지 말자고 정한 기준선입니다. 같은 해 우리나라도 연평균 기온이 처음으로 14℃를 넘었습니다.',
     source: '세계기상기구, 경향신문',
     date: '2025. 1.',
@@ -120,7 +130,8 @@ const ITEMS = [
   {
     id: 'korea-summer',
     title: '점점 뜨거워지는 우리나라의 여름',
-    image: 'images/placeholder-5.svg',
+    image: 'images/items/korea-summer.webp',
+    imageCredit: 'Monotaxism, CC0, 위키미디어 공용',
     body: '2025년 여름 우리나라 평균기온은 25.7℃로, 기상 관측 이래 가장 더운 여름이었습니다. 6월 중순부터 시작된 더위가 8월 말까지 이어졌고, 서울에서는 밤에도 25℃ 아래로 내려가지 않는 열대야가 46일이나 되어 1908년 관측을 시작한 뒤 가장 많았습니다. 어떤 곳에는 기록적인 폭우가, 어떤 곳에는 심한 가뭄이 함께 나타났습니다.',
     source: '기상청',
     date: '2025. 9.',
@@ -130,7 +141,8 @@ const ITEMS = [
   {
     id: 'apple',
     title: '사과 농사 짓는 곳이 북쪽으로 올라가요',
-    image: 'images/placeholder-6.svg',
+    image: 'images/items/apple.webp',
+    imageCredit: 'liz west, CC BY 2.0, 위키미디어 공용',
     body: '사과는 서늘한 곳에서 잘 자라는 과일로, 예전에는 대구와 경북이 대표 산지였습니다. 날씨가 더워지면서 강원도의 사과밭 넓이가 2010년보다 약 7배로 늘었습니다. 농촌진흥청은 이대로라면 2070년대에는 우리나라에서 강원도에서만 사과를 기를 수 있을 것으로 내다봤습니다.',
     source: '경향신문, 농촌진흥청',
     date: '2024. 12.',
@@ -140,7 +152,8 @@ const ITEMS = [
   {
     id: 'blatten',
     title: '빙하가 무너져 마을을 덮쳤어요',
-    image: 'images/placeholder-1.svg',
+    image: 'images/items/blatten.webp',
+    imageCredit: '스위스 연방지형청(swisstopo), swisstopo 출처 표시, 위키미디어 공용',
     body: '2025년 5월 스위스 알프스의 빙하가 무너져 내리면서 얼음과 바위, 흙이 아래쪽 블라텐 마을을 덮쳤습니다. 주민 약 300명이 살던 마을의 90% 정도가 흙더미에 묻혀 사라졌습니다. 전문가들은 기온이 올라 산속의 얼어 있던 땅이 녹으면서 바위가 불안정해진 것을 주요 원인으로 봅니다.',
     source: 'SBS',
     date: '2025. 5.',
@@ -150,7 +163,8 @@ const ITEMS = [
   {
     id: 'pakistan',
     title: '나라의 3분의 1이 물에 잠겼어요',
-    image: 'images/placeholder-2.svg',
+    image: 'images/items/pakistan.webp',
+    imageCredit: 'NASA, 공공 저작물, 위키미디어 공용',
     body: '2022년 여름 파키스탄에 기록적인 폭우가 쏟아져 나라 땅의 약 3분의 1이 물에 잠겼습니다. 인구의 7분의 1인 3,300만 명이 넘는 사람이 피해를 입었고, 집 150만 채가 부서졌습니다. 홍수가 난 지 1년이 지나서도 150만 명이 집으로 돌아가지 못한 채 지내야 했습니다.',
     source: 'SBS, 한국일보',
     date: '2022. 9.',
@@ -160,7 +174,8 @@ const ITEMS = [
   {
     id: 'coral',
     title: '하얗게 변한 바닷속 숲',
-    image: 'images/placeholder-3.svg',
+    image: 'images/items/coral.webp',
+    imageCredit: 'NOAA/Caitlin Seaview Survey, 공공 저작물, 위키미디어 공용',
     body: "산호초는 수많은 바다 생물이 모여 사는 '바다의 숲'입니다. 바닷물이 너무 뜨거워지면 산호는 색을 잃고 하얗게 변하는데, 이 상태가 오래가면 산호가 죽습니다. 2023년부터 2025년까지 전 세계 산호초의 84%가 이런 백화 현상을 일으킬 만큼 뜨거운 바닷물에 시달렸습니다. 산호가 사라지면 그곳에 살던 바다 생물도 집과 먹이를 잃습니다.",
     source: '국제산호초이니셔티브, 한국일보',
     date: '2025. 4.',
@@ -170,7 +185,8 @@ const ITEMS = [
   {
     id: 'wildfire',
     title: '산과 마을을 태운 큰불',
-    image: 'images/placeholder-4.svg',
+    image: 'images/items/wildfire.webp',
+    imageCredit: 'EU 코페르니쿠스 센티널-2, 출처 표시, 위키미디어 공용',
     body: '2025년 3월 경북 의성에서 시작된 산불이 강한 바람을 타고 안동, 청송, 영양, 영덕까지 번졌습니다. 산림청 조사에 따르면 같은 시기 경남, 울산에서 난 산불까지 합쳐 약 10만 4천ha의 숲이 피해를 입었는데, 이는 서울 면적의 약 1.7배입니다. 숲에 살던 동식물이 터전을 잃었고, 숲이 되살아나려면 수십 년이 걸립니다.',
     source: '산림청',
     date: '2025. 4.',
@@ -190,7 +206,8 @@ const ITEMS = [
   {
     id: 'sea-turtle',
     title: '바다거북의 배 속에서 나온 것',
-    image: 'images/placeholder-6.svg',
+    image: 'images/items/sea-turtle.webp',
+    imageCredit: 'Doug Helton/NOAA, 공공 저작물, 위키미디어 공용',
     body: '우리나라 바닷가에서 죽은 채 발견된 바다거북을 조사했더니, 10마리 가운데 7마리의 배 속에서 비닐과 낚싯바늘 같은 플라스틱 쓰레기가 나왔습니다. 바다에 오래 떠다닌 플라스틱에서는 먹이와 비슷한 냄새가 나서, 거북이 먹이로 착각해 삼킵니다. 바다거북은 식도에 난 돌기 때문에 한번 삼킨 것을 뱉어 내지 못해, 장이 다치거나 막혀 죽기도 합니다.',
     source: '국립생태원·국립해양생물자원관, SBS',
     date: '2023.',
@@ -200,7 +217,8 @@ const ITEMS = [
   {
     id: 'garbage-patch',
     title: '바다 위에 떠 있는 거대한 쓰레기 지대',
-    image: 'images/placeholder-1.svg',
+    image: 'images/items/garbage-patch.webp',
+    imageCredit: 'NOAA, 공공 저작물, 위키미디어 공용',
     body: "북태평양 한가운데에는 바닷물이 빙빙 도는 곳에 플라스틱 쓰레기가 모여 생긴 '거대 쓰레기 섬'이 있습니다. 진짜 섬은 아니지만 넓이가 약 155만㎢로 한반도 면적의 7배나 되고, 쓰레기가 약 8만 톤 모여 있습니다. 잘게 부서진 플라스틱 조각은 물고기와 바닷새가 먹이로 착각해 먹습니다.",
     source: '오션클린업 연구팀, SBS',
     date: '2018. 3.',
@@ -210,7 +228,8 @@ const ITEMS = [
   {
     id: 'wildlife',
     title: '50년 동안 사라진 야생동물',
-    image: 'images/placeholder-2.svg',
+    image: 'images/items/wildlife.webp',
+    imageCredit: 'Bernard Dupont, CC BY-SA 2.0, 위키미디어 공용',
     body: '세계자연기금(WWF)은 1970년부터 2020년까지 50년 동안 조사한 야생동물 무리의 크기가 평균 73% 줄었다고 발표했습니다. 특히 강과 호수에 사는 동물이 가장 많이 줄었습니다. 동물이 사는 숲과 습지가 농장과 도시로 바뀌고, 사람들이 너무 많이 잡은 것이 주요 원인입니다.',
     source: '세계자연기금, 경향신문',
     date: '2024. 10.',
@@ -220,7 +239,8 @@ const ITEMS = [
   {
     id: 'bees',
     title: '꿀벌이 사라지고 있어요',
-    image: 'images/placeholder-3.svg',
+    image: 'images/items/bees.webp',
+    imageCredit: 'Ivan Radic, CC BY 2.0, 위키미디어 공용',
     body: '2022년 초 우리나라 곳곳에서 겨울을 나던 꿀벌이 한꺼번에 사라졌습니다. 정부는 벌통 약 39만 개, 꿀벌 약 78억 마리가 사라진 것으로 추정했습니다. 겨울에 따뜻한 날이 이어지자 벌들이 일찍 알을 낳았다가, 갑자기 추워지면서 애벌레를 제대로 키우지 못한 것이 원인으로 꼽힙니다. 꿀벌은 꽃가루를 옮겨 과일과 채소가 열매를 맺게 도우므로, 꿀벌이 줄면 우리 식탁도 위협받습니다.',
     source: '농림축산식품부, SBS',
     date: '2022. 4.',
@@ -230,7 +250,8 @@ const ITEMS = [
   {
     id: 'amazon',
     title: '지구의 허파가 줄어들고 있어요',
-    image: 'images/placeholder-4.svg',
+    image: 'images/items/amazon.webp',
+    imageCredit: 'Jesse Allen·Robert Simmon/NASA, 공공 저작물, 위키미디어 공용',
     body: '남아메리카의 아마존 열대우림은 세계에서 가장 넓은 열대우림으로, 수많은 동식물이 살고 있습니다. 2022년 상반기 6개월 동안에만 브라질 아마존에서 서울 면적의 약 6.6배인 3,987㎢의 숲이 사라졌습니다. 농지를 넓히려고 숲에 불을 지르거나, 불법으로 나무를 베고 광물을 캐는 일이 주된 원인입니다.',
     source: '브라질 국립우주연구소, 경향신문',
     date: '2022. 7.',
@@ -240,7 +261,8 @@ const ITEMS = [
   {
     id: 'displaced',
     title: '집을 떠나야 했던 1억 명이 넘는 사람들',
-    image: 'images/placeholder-5.svg',
+    image: 'images/items/displaced.webp',
+    imageCredit: '미국 국무부, 공공 저작물, 위키미디어 공용',
     body: '유엔난민기구에 따르면 2023년 말 전쟁, 박해, 폭력을 피해 집을 떠나야 했던 사람은 1억 1,730만 명으로 역대 가장 많았습니다. 우리나라 인구의 2배가 넘는 숫자입니다. 수단 내전, 가자지구 전쟁, 미얀마의 혼란, 우크라이나 전쟁 등이 사람들을 고향에서 떠나게 했습니다.',
     source: '유엔난민기구, 경향신문',
     date: '2024. 6.',
@@ -250,7 +272,8 @@ const ITEMS = [
   {
     id: 'sudan',
     title: '세계에서 가장 많은 사람이 집을 잃은 나라',
-    image: 'images/placeholder-6.svg',
+    image: 'images/items/sudan.webp',
+    imageCredit: 'Henry Wilkins/VOA, 공공 저작물, 위키미디어 공용',
     body: '아프리카 수단에서는 2023년 4월 시작된 내전이 2년 넘게 이어지고 있습니다. 2025년 4월까지 1천3백만 명이 넘는 사람이 폭력을 피해 집을 떠났고, 400만 명 가까이는 이웃 나라로 넘어갔습니다. 분쟁 지역 병원의 80%가 문을 닫아 아파도 치료받기 어렵고, 3천만 명이 넘는 사람이 긴급 지원을 기다리고 있습니다.',
     source: '유엔, SBS',
     date: '2025. 4.',
@@ -260,7 +283,8 @@ const ITEMS = [
   {
     id: 'rohingya',
     title: '하루 300원어치 식량으로 버텨요',
-    image: 'images/placeholder-1.svg',
+    image: 'images/items/rohingya.webp',
+    imageCredit: 'VOA, 공공 저작물, 위키미디어 공용',
     body: '미얀마에서 박해를 피해 이웃 나라 방글라데시로 온 로힝야족 약 100만 명이 콕스바자르의 좁은 난민촌에서 살고 있습니다. 2023년 지원금이 모자라자 한 사람이 한 달 동안 받는 식량 지원이 8달러, 하루 300원 남짓으로 줄었습니다. 끼니를 거르는 가족이 많아졌고, 생계 때문에 어린이가 일을 하거나 일찍 결혼하는 일도 늘고 있습니다.',
     source: '유엔난민기구',
     date: '2023.',
@@ -270,7 +294,8 @@ const ITEMS = [
   {
     id: 'ukraine',
     title: '전쟁을 피해 나라를 떠난 어린이들',
-    image: 'images/placeholder-2.svg',
+    image: 'images/items/ukraine.webp',
+    imageCredit: 'Mirek Pruchnicki, CC BY 2.0, 위키미디어 공용',
     body: '2022년 2월 러시아가 우크라이나를 침공한 뒤 수많은 사람이 고향을 떠났습니다. 전쟁이 시작되고 2주쯤 지났을 때 이미 어린이 약 50만 명이 다른 나라로 피란했고, 학교가 문을 닫아 570만 명이 넘는 어린이와 청소년이 공부를 하지 못했습니다. 부모 없이 혼자 국경을 건너는 어린이도 있었습니다.',
     source: '유니세프, 경향신문',
     date: '2022. 3.',
@@ -280,7 +305,8 @@ const ITEMS = [
   {
     id: 'climate-refugees',
     title: '날씨 때문에 집을 떠나는 사람들',
-    image: 'images/placeholder-3.svg',
+    image: 'images/items/climate-refugees.webp',
+    imageCredit: 'Bettina Vier, CC BY-SA 4.0, 위키미디어 공용',
     body: "2021년 여름 미국, 캐나다, 그리스, 터키에서는 큰 산불로 수만 명이 집을 잃었고, 독일과 중국 등에서는 큰 홍수로 이재민이 100만 명 넘게 생겼습니다. 이처럼 홍수, 가뭄, 산불 같은 재해 때문에 살던 곳을 떠나는 사람을 '기후 난민'이라고 부릅니다. 이런 재해로 집을 떠난 사람이 전쟁 때문에 떠난 사람보다 3배쯤 많다는 조사도 있습니다.",
     source: '국내실향민감시센터, 경향신문',
     date: '2021. 8.',
@@ -292,7 +318,8 @@ const ITEMS = [
   {
     id: 'ozone',
     title: '구멍 난 하늘이 다시 메워지고 있어요',
-    image: 'images/placeholder-4.svg',
+    image: 'images/items/ozone.webp',
+    imageCredit: 'Lauren Dauphin/NASA 지구관측소, 공공 저작물, 위키미디어 공용',
     body: "1987년 세계 여러 나라가 '몬트리올 의정서'를 맺고, 오존층을 파괴하는 물질을 쓰지 않기로 약속했습니다. 오존층은 태양의 해로운 자외선을 막아 주는 지구의 보호막인데, 냉장고와 스프레이에 쓰던 물질 때문에 남극 하늘에 구멍이 생겼었습니다. 약속을 지킨 결과 이 물질은 99% 넘게 줄었고, 남극 오존층은 2066년쯤 1980년 수준으로 회복될 것으로 보입니다.",
     source: '세계기상기구',
     date: '2025. 9.',
@@ -302,7 +329,8 @@ const ITEMS = [
   {
     id: 'renewables',
     title: '햇빛과 바람이 석탄을 앞질렀어요',
-    image: 'images/placeholder-5.svg',
+    image: 'images/items/renewables.webp',
+    imageCredit: 'hpgruesen, CC0, 위키미디어 공용',
     body: '2025년 상반기, 세계에서 햇빛·바람·물로 만든 전기가 처음으로 석탄으로 만든 전기보다 많아졌습니다. 특히 여러 나라가 태양광 발전을 빠르게 늘려, 새로 늘어난 전기 사용량의 83%를 태양광이 채웠습니다. 재생에너지는 다시 쓸 수 있고 온실가스도 거의 내뿜지 않습니다.',
     source: '엠버(Ember)',
     date: '2025. 10.',
@@ -312,7 +340,8 @@ const ITEMS = [
   {
     id: 'paris',
     title: '195개 나라가 한 약속',
-    image: 'images/placeholder-6.svg',
+    image: 'images/items/paris.webp',
+    imageCredit: 'Arnaud Bouissou, CC0, 위키미디어 공용',
     body: "2015년 12월 프랑스 파리에서 195개 나라가 '파리협정'을 맺었습니다. 지구 평균기온이 산업화 이전보다 2℃ 넘게 오르지 않도록 하고, 될 수 있으면 1.5℃ 안으로 막자고 약속했습니다. 각 나라는 온실가스를 얼마나 줄일지 스스로 목표를 세웠고, 우리나라는 2050년까지 탄소 중립을 이루겠다는 목표를 세웠습니다.",
     source: '유엔기후변화협약',
     date: '2015. 12.',
@@ -322,7 +351,8 @@ const ITEMS = [
   {
     id: 'bear',
     title: '지리산에 돌아온 반달가슴곰',
-    image: 'images/placeholder-1.svg',
+    image: 'images/items/bear.webp',
+    imageCredit: 'ThomasMelle, CC BY 3.0, 위키미디어 공용',
     body: "우리나라는 2004년부터 지리산에 반달가슴곰을 풀어 주는 복원 사업을 하고 있습니다. 가슴에 반달 모양 흰 털이 있는 반달가슴곰은 한때 우리나라에서 거의 사라졌던 동물입니다. 꾸준한 노력으로 지금은 100마리 가까이 늘었고, 사람과 곰이 함께 살 수 있도록 등산로에 '곰 주의 종'을 다는 노력도 이어지고 있습니다.",
     source: '국립공원공단',
     date: '2026. 5.',
@@ -332,7 +362,8 @@ const ITEMS = [
   {
     id: 'ocean-cleanup',
     title: '바다 쓰레기를 건져 올리는 사람들',
-    image: 'images/placeholder-2.svg',
+    image: 'images/items/ocean-cleanup.webp',
+    imageCredit: 'The Ocean Cleanup(Boyan Slat), CC0, 위키미디어 공용',
     body: "네덜란드의 비영리 단체 '오션클린업'은 긴 그물 장치로 바다와 강에 떠 있는 플라스틱 쓰레기를 모읍니다. 쓰레기가 바다로 흘러가기 전에 막는 장치도 여러 나라 강에 설치했습니다. 2025년 한 해에만 2,500만kg이 넘는 쓰레기를 건져 올렸고, 지금까지 모은 양은 4,500만kg이 넘습니다.",
     source: '오션클린업',
     date: '2026. 1.',
@@ -342,7 +373,8 @@ const ITEMS = [
   {
     id: 'refugee-team',
     title: '올림픽에 나선 특별한 팀',
-    image: 'images/placeholder-3.svg',
+    image: 'images/items/refugee-team.webp',
+    imageCredit: 'Web Summit, CC BY 2.0, 위키미디어 공용',
     body: "국제올림픽위원회는 유엔난민기구와 함께 2016년부터 고향을 떠난 난민 선수들로 '난민 올림픽 팀'을 꾸리고 있습니다. 2024년 파리 올림픽에는 37명이 12개 종목에 나섰습니다. 카메룬에서 태어나 영국에서 자란 복싱 선수 신디 은감바는 난민 팀 역사상 첫 메달인 동메달을 땄습니다.",
     source: '유엔난민기구',
     date: '2024. 8.',
