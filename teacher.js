@@ -26,6 +26,7 @@
     view: 'status',            // 'status' | 'overlap' | 'remaining' | 'settings'
     showRemaining: false,      // 남은 자료는 버튼을 눌렀을 때만 보여 준다
     openItemId: null,          // 남은 자료 상세
+    openStudent: null,         // 현황판에서 누른 학생(쓰기 도움 켜기/끄기)
     board: null,               // 칠판 모드 단계 번호, 꺼져 있으면 null
     boardReveal: false,        // 칠판 모드 남은 자료 공개 여부
     timer: { stageId: null, duration: 0, left: 0, running: false, endAt: 0 },
@@ -53,6 +54,15 @@
   function entryOf(sid) {
     const entry = state.db.entries[sid];
     return entry && entry.itemId === claimOf(sid) && entry.text ? entry : null;
+  }
+
+  // 쓰기 도움 학생 목록. /settings/supportIds에 'climate-2,refugee-3'처럼 글자로 저장한다.
+  function supportIds() {
+    return String(state.db.settings.supportIds || '').split(',').filter(Boolean);
+  }
+
+  function isSupport(sid) {
+    return supportIds().includes(sid) || SUPPORT_STUDENTS.includes(sid);
   }
 
   function counts() {
@@ -193,11 +203,13 @@
         const itemId = claimOf(sid);
         const entry = entryOf(sid);
         const reason = checkReason(sid);
+        const sup = isSupport(sid) ? `<span class="sup-mark" title="쓰기 도움">${icon('sparkle')}</span>` : '';
         if (!itemId) {
-          return `<td class="cell no-claim"><span class="state">자료 없음</span></td>`;
+          return `<td class="cell no-claim" data-action="open-student" data-sid="${sid}">${sup}<span class="state">자료 없음</span></td>`;
         }
         return `
-          <td class="cell ${entry ? 'done' : 'no-entry'} ${reason ? 'check' : ''}">
+          <td class="cell ${entry ? 'done' : 'no-entry'} ${reason ? 'check' : ''}" data-action="open-student" data-sid="${sid}">
+            ${sup}
             ${reason ? `<span class="flag">${icon('alert')}${reason}</span>` : ''}
             <span class="item"><em>${ITEM_NO[itemId]}</em>${esc(itemsById[itemId].title)}</span>
             ${entry
@@ -231,6 +243,8 @@
             <span class="sw no-entry"></span>정리 전
             <span class="sw done"></span>정리 완료
             <span class="sw check"></span>확인 필요
+            <span class="legend-sup">${icon('sparkle')}쓰기 도움</span>
+            <span class="legend-tip">칸을 누르면 정리 전체 보기 · 쓰기 도움 켜기</span>
           </p>
         </section>
         <aside class="checks">
@@ -304,6 +318,14 @@
           <p class="url">${esc(studentUrl)}</p>
         </section>
         <section>
+          <h2>${icon('print')}활동지 인쇄</h2>
+          <p class="muted">A4 한 장. 새 창에서 열고 '인쇄하기'를 눌러요.</p>
+          <div class="ws-links">
+            <a class="btn" href="worksheet.html" target="_blank" rel="noopener">${icon('print')}일반용</a>
+            <a class="btn btn-ghost" href="worksheet.html?type=support" target="_blank" rel="noopener">${icon('sparkle')}쓰기 도움용(문장 틀)</a>
+          </div>
+        </section>
+        <section>
           <h2>${icon('check')}자료 점검</h2>
           ${problems.length
             ? `<ul class="problems">${problems.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>`
@@ -311,13 +333,17 @@
         </section>
         <section class="danger-zone">
           <h2>${icon('trash')}초기화</h2>
-          <p>모든 학생의 가져간 자료와 정리를 지우고 친구 보고서와 관련 자료 링크를 닫아요. 리허설 뒤나 다른 반 수업 전에 쓰세요.</p>
+          <p>모든 학생의 가져간 자료와 정리를 지우고 친구 보고서와 관련 자료 링크를 닫아요. 리허설 뒤나 다른 반 수업 전에 쓰세요. 쓰기 도움 지정은 그대로 남아요.</p>
           <button class="btn btn-danger btn-large" data-action="reset">전체 초기화</button>
         </section>
       </div>`;
   }
 
   function renderItemModal() {
+    if (state.openStudent) {
+      renderStudentModal();
+      return;
+    }
     const it = itemsById[state.openItemId];
     if (!it) {
       modalRoot.innerHTML = '';
@@ -340,6 +366,57 @@
           </div>
         </div>
       </div>`;
+  }
+
+  // 현황판에서 학생 칸을 눌렀을 때: 정리 전체와 쓰기 도움 스위치
+  function renderStudentModal() {
+    const sid = state.openStudent;
+    const itemId = claimOf(sid);
+    const it = itemId ? itemsById[itemId] : null;
+    const entry = entryOf(sid);
+    const on = isSupport(sid);
+    const fixed = SUPPORT_STUDENTS.includes(sid);
+    const { group } = parseStudentId(sid);
+    modalRoot.innerHTML = `
+      <div class="overlay" data-action="close-item">
+        <div class="modal student-modal" role="dialog" aria-modal="true">
+          <button class="close" data-action="close-item" aria-label="닫기">${icon('x')}</button>
+          <div class="sm-head">${groupChip(group, studentLabel(sid))}</div>
+          ${it
+            ? `<div class="sm-item">
+                <img src="${esc(it.image)}" alt="">
+                <div>
+                  <span class="kicker">자료 ${ITEM_NO[itemId]}</span>
+                  <h2>${esc(it.title)}</h2>
+                  ${checkReason(sid) ? `<span class="pill warn">${checkReason(sid)}</span>` : ''}
+                </div>
+              </div>
+              <p class="sm-text ${entry ? '' : 'none'}">${entry ? esc(entry.text) : '아직 정리를 저장하지 않았어요.'}</p>`
+            : '<p class="sm-text none">아직 자료를 가져가지 않았어요.</p>'}
+          <div class="sm-support">
+            <div>
+              <strong>${icon('sparkle')}쓰기 도움</strong>
+              <p>켜면 이 학생의 내 보고서에 '낱말 골라 문장 만들기' 버튼이 나와요. 자료마다 준비된 보기 중에서 골라 문장을 만들 수 있어요. 학생 화면에는 '도움'이라는 말이 나오지 않아요.</p>
+            </div>
+            <button class="switch dark ${on ? 'on' : ''}" data-action="toggle-support" data-sid="${sid}" aria-pressed="${on}" ${fixed ? 'disabled' : ''}>
+              <span>${on ? '켜짐' : '꺼짐'}</span><i></i>
+            </button>
+          </div>
+          ${fixed ? '<p class="muted sm-note">data.js의 SUPPORT_STUDENTS에 들어 있어 여기서 끌 수 없어요.</p>' : ''}
+        </div>
+      </div>`;
+  }
+
+  async function toggleSupport(sid) {
+    const ids = supportIds().filter((x) => x !== sid);
+    const next = !ids.includes(sid) && !supportIds().includes(sid);
+    if (next) ids.push(sid);
+    try {
+      await Store.setSetting('supportIds', ids.join(','));
+      toast(next ? `${studentLabel(sid)} 쓰기 도움을 켰어요.` : `${studentLabel(sid)} 쓰기 도움을 껐어요.`);
+    } catch (e) {
+      toast('바꾸지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
+    }
   }
 
   // ---------- 칠판 모드 ----------
@@ -407,6 +484,7 @@
           <li>맡은 사례에서는 <b>어떤 문제</b>가 일어나고 있나요?</li>
           <li>그 문제는 <b>얼마나 심각한가요?</b></li>
           <li>정리한 내용을 '내 보고서'에 쓰고 <b>저장</b>을 눌러요.</li>
+          <li>활동지 표의 <b>우리 모둠 줄</b>에 ○ 하고, 그 줄을 먼저 채워요.</li>
         </ol>
         <p class="b-example">예) 투발루의 섬들이 바닷물에 잠기고 있습니다. 9개 섬 가운데 2개가 이미 거의 잠길 만큼 심각합니다.</p>
         ${progress('정리를 저장한 사람', c.written)}`;
@@ -422,7 +500,7 @@
         <div class="b-teams">${teams}</div>
         <ol class="b-steps compact">
           <li>'내 보고서'에서 <b>설명 모드</b>를 켜고, 사진을 보여 주며 내가 맡은 문제를 설명해요.</li>
-          <li>친구의 설명을 들으며 <b>활동지 정리표</b>를 채워요.</li>
+          <li>친구의 설명을 듣고 <b>활동지 표의 빈칸</b>을 채워요.</li>
         </ol>`;
     } else if (stage.id === 'overlap') {
       body = `
@@ -638,7 +716,15 @@
         break;
       case 'close-item':
         state.openItemId = null;
+        state.openStudent = null;
         renderItemModal();
+        break;
+      case 'open-student':
+        state.openStudent = el.dataset.sid;
+        renderItemModal();
+        break;
+      case 'toggle-support':
+        toggleSupport(el.dataset.sid);
         break;
       case 'reset':
         resetAll();
@@ -694,8 +780,9 @@
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && state.openItemId) {
+    if (e.key === 'Escape' && (state.openItemId || state.openStudent)) {
       state.openItemId = null;
+      state.openStudent = null;
       renderItemModal();
       return;
     }

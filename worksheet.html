@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>지구촌 탐사대 활동지</title>
+  <link rel="stylesheet" href="fonts/pretendard.css">
+  <style>
+    /* A4 세로 한 장. 화면에서는 종이처럼 보이고, 인쇄하면 도구 막대가 빠진다. */
+    @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: #e9e6df;
+      color: #16202c;
+      font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif;
+      word-break: keep-all;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .toolbar {
+      position: sticky; top: 0; z-index: 5;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 12px 20px; background: #0e2440; color: #fff; font-size: 15px;
+    }
+    .toolbar strong { margin-right: auto; font-size: 17px; }
+    .toolbar a, .toolbar button {
+      padding: 8px 14px; border: none; border-radius: 10px; font: inherit; font-weight: 700;
+      background: rgba(255,255,255,0.12); color: #fff; text-decoration: none; cursor: pointer;
+    }
+    .toolbar a[aria-current="true"] { background: #fff; color: #0e2440; }
+    .toolbar .print { background: #f2a93b; color: #0e2440; }
+    .toolbar small { width: 100%; color: #a9c4e6; font-size: 13px; }
+
+    .sheet {
+      width: 210mm; height: 297mm; margin: 16px auto 40px; padding: 11mm 12mm 10mm;
+      background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* 머리 */
+    .head { display: flex; align-items: flex-end; gap: 6mm; padding-bottom: 3mm; border-bottom: 0.6mm solid #0e2440; }
+    .head-title { flex: 1; }
+    .kicker { margin: 0; color: #5a6878; font-size: 9.5pt; font-weight: 600; }
+    h1 { margin: 0.5mm 0 0; font-size: 21pt; letter-spacing: -0.03em; line-height: 1.15; }
+    h1 small { margin-left: 2mm; font-size: 12pt; font-weight: 700; color: #1f63b5; }
+    .who { display: flex; gap: 4mm; font-size: 11pt; font-weight: 700; }
+    .who span { display: flex; align-items: flex-end; gap: 1.5mm; white-space: nowrap; }
+    .who i { display: inline-block; border-bottom: 0.3mm solid #16202c; height: 6mm; }
+    .who .num i { width: 12mm; }
+    .who .name i { width: 30mm; }
+
+    .question {
+      display: flex; align-items: center; gap: 3mm; margin-top: 3.5mm; padding: 2.6mm 4mm;
+      border-radius: 3mm; background: #edf4fc; border: 0.3mm solid #c9dcf3;
+    }
+    .question b { flex: none; padding: 0.6mm 2.4mm; border-radius: 10mm; background: #0e2440; color: #fff; font-size: 9.5pt; }
+    .question p { margin: 0; font-size: 13pt; font-weight: 800; letter-spacing: -0.02em; }
+
+    .notes { display: flex; gap: 2mm; flex-wrap: wrap; margin: 3mm 0 2.5mm; font-size: 9.5pt; color: #3a4655; }
+    .notes span { display: inline-flex; align-items: center; gap: 1.4mm; padding: 0.8mm 2.6mm; border-radius: 10mm; background: #f3f1ec; }
+    .notes .mine-dot { flex: none; width: 3.2mm; height: 3.2mm; border-radius: 50%; border: 0.4mm solid #16202c; }
+
+    /* 정리표 */
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; --rowh: 54mm; }
+    thead th {
+      padding: 2mm 2.5mm; background: #0e2440; color: #fff; text-align: left; vertical-align: top;
+      font-size: 11pt; font-weight: 800; line-height: 1.25;
+    }
+    thead th small { display: block; margin-top: 0.4mm; color: #a9c4e6; font-size: 8pt; font-weight: 600; }
+    thead th:first-child { border-radius: 2.5mm 0 0 0; }
+    thead th:last-child { border-radius: 0 2.5mm 0 0; }
+    col.c-topic { width: 31mm; }
+    col.c-where { width: 33mm; }
+    tbody tr { height: var(--rowh); }
+    tbody td { border: 0.3mm solid #c9c3b6; vertical-align: top; padding: 0; }
+    tbody tr:last-child td { border-bottom-width: 0.5mm; }
+
+    .topic { padding: 2.5mm 2.5mm 2mm; background: var(--gs); border-left: 1.6mm solid var(--g) !important; }
+    .topic-in { display: flex; flex-direction: column; height: calc(var(--rowh) - 4.5mm); }
+    .topic img { width: 11mm; height: 11mm; }
+    .topic strong { display: block; margin-top: 1mm; color: var(--g); font-size: 11pt; line-height: 1.25; letter-spacing: -0.02em; }
+    .topic .mine { display: flex; align-items: center; gap: 1.4mm; margin-top: auto; font-size: 8.5pt; font-weight: 700; color: #3a4655; }
+    .topic .mine i { width: 3.6mm; height: 3.6mm; border-radius: 50%; border: 0.4mm solid #16202c; background: #fff; }
+    .topic .no { display: flex; align-items: flex-end; gap: 1mm; margin-top: 1.6mm; font-size: 8.5pt; font-weight: 700; color: #3a4655; }
+    .topic .no i { flex: 1; max-width: 9mm; border-bottom: 0.3mm solid #16202c; height: 4mm; }
+
+    /* 쓰는 칸: 연한 줄을 그어 둔다 */
+    .write {
+      height: calc(var(--rowh) - 0.3mm);
+      background-image: repeating-linear-gradient(to bottom, transparent 0 9.6mm, #ddd8cd 9.6mm 9.9mm);
+      background-size: calc(100% - 5mm) 9.9mm;
+      background-position: 2.5mm 3mm;
+      background-repeat: repeat-y;
+    }
+
+    /* 쓰기 도움용: 칸마다 문장 틀 */
+    .frame { display: flex; flex-direction: column; justify-content: center; gap: 5mm; height: calc(var(--rowh) - 0.3mm); padding: 2.5mm 3mm; font-size: 12pt; font-weight: 700; color: #3a4655; }
+    .frame p { margin: 0; display: flex; align-items: flex-end; gap: 1.5mm; flex-wrap: wrap; line-height: 1.6; }
+    .frame i { display: inline-block; flex: 1; min-width: 10mm; border-bottom: 0.35mm solid #16202c; height: 7mm; }
+    .frame .hint { font-size: 8.5pt; font-weight: 500; color: #8a94a2; }
+
+    .foot { display: flex; justify-content: space-between; margin-top: 2.5mm; color: #8a94a2; font-size: 8pt; }
+
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <strong>활동지 인쇄</strong>
+    <a href="worksheet.html" id="v-basic">일반용</a>
+    <a href="worksheet.html?type=support" id="v-support">쓰기 도움용</a>
+    <button class="print" onclick="window.print()">인쇄하기</button>
+    <small>인쇄 창에서 용지 A4, 배율 '기본값(100%)', 여백 '없음', '배경 그래픽' 켜기를 선택하세요.</small>
+  </div>
+  <div class="sheet" id="sheet"></div>
+
+  <script src="data.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const support = new URLSearchParams(location.search).get('type') === 'support';
+    document.getElementById(support ? 'v-support' : 'v-basic').setAttribute('aria-current', 'true');
+
+    const COLS = [
+      ['어디에서?', '나라나 지역 이름'],
+      ['어떤 문제가 일어나고 있나요?', '무슨 일이 생겼는지'],
+      ['얼마나 심각한가요?', '숫자나 피해 내용'],
+    ];
+    const FRAMES = [
+      ['<i></i><span>에서</span>', '나라·지역'],
+      ['<i></i>', '무슨 일이?'],
+      ['<i></i>', '숫자나 피해'],
+    ];
+
+    function cells() {
+      if (!support) return COLS.map(() => '<td><div class="write"></div></td>').join('');
+      return FRAMES.map(([f, hint]) => `
+        <td><div class="frame"><p>${f}</p><p>${f.includes('에서') ? '' : '<i></i>'}</p><span class="hint">${hint}</span></div></td>`).join('');
+    }
+
+    const rows = GROUPS.map((g) => {
+      const st = GROUP_STYLE[g.id];
+      return `
+        <tr>
+          <td class="topic" style="--g:${st.color};--gs:${st.soft}">
+            <div class="topic-in">
+              <img src="${UI_IMG}emblem-${g.id}.webp" alt="">
+              <strong>${esc(g.name)}</strong>
+              <span class="no">자료<i></i>번</span>
+              <span class="mine"><i></i>우리 모둠</span>
+            </div>
+          </td>
+          ${cells()}
+        </tr>`;
+    }).join('');
+
+    document.getElementById('sheet').innerHTML = `
+      <header class="head">
+        <div class="head-title">
+          <p class="kicker">6학년 사회 · 지구촌의 문제와 지속가능한 미래</p>
+          <h1>지구촌 탐사대 보고서</h1>
+        </div>
+        <div class="who">
+          <span class="num">내 번호<i></i>번</span>
+          <span class="name">이름<i></i></span>
+        </div>
+      </header>
+      <div class="question"><b>탐구 질문</b><p>지구촌을 위협하는 문제에는 어떤 것들이 있을까요?</p></div>
+      <div class="notes">
+        <span><span class="mine-dot"></span>우리 모둠 줄에 ○ 하고, 그 줄부터 먼저 채워요.</span>
+        <span>낱말로 짧게 써도 돼요.</span>
+      </div>
+      <table>
+        <colgroup><col class="c-topic"><col class="c-where"><col><col></colgroup>
+        <thead><tr><th>지구촌 문제</th>${COLS.map(([t, s]) => `<th>${t}<small>${s}</small></th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="foot"><span>친구의 설명을 듣고 빈칸을 채워요.</span><span>지구촌 탐사대</span></div>`;
+  </script>
+</body>
+</html>

@@ -147,6 +147,32 @@
 .cell.no-entry .state { color: var(--mate); }
 .cell.done { background: var(--surface); box-shadow: var(--sh-1), inset 4px 0 0 var(--mine); }
 .cell.check { box-shadow: inset 0 0 0 3px #e07a2e; }
+.cell[data-action] { cursor: pointer; }
+.cell[data-action]:hover { filter: brightness(0.97); }
+.sup-mark { position: absolute; top: 0.35rem; right: 0.4rem; display: grid; place-items: center; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--sun); color: var(--navy-900); }
+.sup-mark .ic { width: 0.85rem; height: 0.85rem; }
+.legend-sup { display: inline-flex; align-items: center; gap: 0.3em; }
+.legend-sup .ic { color: #c9852a; }
+.legend-tip { margin-left: auto; }
+
+/* 학생 칸을 눌렀을 때 */
+.student-modal { width: min(640px, 100%); padding: 1.6rem 1.8rem 1.5rem; }
+.sm-head { margin-right: 3rem; }
+.sm-item { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
+.sm-item img { width: 7.5rem; height: 5rem; object-fit: cover; border-radius: 12px; background: var(--navy-900); flex: none; }
+.sm-item h2 { margin: 0 0 0.3rem; font-size: 1.2rem; line-height: 1.35; letter-spacing: -0.02em; }
+.sm-text { margin: 1rem 0 0; padding: 0.9rem 1rem; border-radius: var(--r); background: var(--surface-2); font-size: 1.05rem; line-height: 1.7; }
+.sm-text.none { color: var(--muted); }
+.sm-support { display: flex; align-items: center; gap: 1rem; margin-top: 1.2rem; padding-top: 1.1rem; border-top: 1px solid var(--line-2); }
+.sm-support strong { display: inline-flex; align-items: center; gap: 0.35em; font-size: 1.05rem; }
+.sm-support strong .ic { color: #c9852a; }
+.sm-support p { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
+.switch.dark { flex: none; background: var(--surface-2); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
+.switch.dark i { background: var(--line); }
+.switch.dark.on { background: var(--mine-50); color: var(--mine); }
+.switch.dark.on i { background: var(--mine); }
+.switch.dark:disabled { opacity: 0.6; }
+.sm-note { margin: 0.5rem 0 0; font-size: 0.85rem; }
 
 /* 넓은 화면: 현황판을 스크롤 없이 한 화면에 맞춘다. 칸 높이는 남은 높이를 4모둠이 나눠 갖는다. */
 @media (min-width: 1201px) and (min-height: 540px) {
@@ -402,3 +428,6 @@ button.big-card:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
 .b-mini-switch { display: inline-flex; align-items: center; gap: 0.35em; padding: 0.4em 0.8em; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 0.85em; font-weight: 700; box-shadow: inset 0 0 0 1px var(--line); }
 .b-mini-switch.on { background: var(--mine-50); color: var(--mine); box-shadow: inset 0 0 0 1px #b9e2c7; }
 .b-exit { display: inline-flex; align-items: center; gap: 0.3em; color: var(--muted); }
+
+.ws-links { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.6rem; }
+.ws-links .btn { text-decoration: none; }

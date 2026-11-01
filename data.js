@@ -8,7 +8,7 @@ const GROUPS = [
   { id: 'refugee',   name: '난민 문제' },
 ];
 const MEMBERS_PER_GROUP = 5;             // 1~5번
-const SUPPORT_STUDENTS = ['climate-2'];   // 문장 틀을 미리 보여 줄 학생
+const SUPPORT_STUDENTS = [];   // 처음부터 쓰기 도움을 켤 학생(예: 'climate-2'). 보통은 비워 두고 교사 화면 현황판에서 켠다.
 const SENTENCE_FRAME = '___에서 ___ 문제가 일어나고 있습니다. ';
 const SHUFFLE_SEED = 1102;               // 자료 섞는 순서. 모든 학생이 같은 순서로 본다.
 

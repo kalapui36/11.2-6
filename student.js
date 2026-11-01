@@ -13,6 +13,7 @@
     openItemId: null,      // 상세 화면에 열린 자료
     explain: false,        // 설명 모드
     justClaimed: null,     // 방금 가져간 자료(도장 찍히는 움직임용)
+    helper: null,          // 낱말 골라 문장 만들기 창 { step, picks: { where, what, how } }
     busy: false,
     draft: loadDraft(),    // { sid, itemId, text } 또는 null
     db: { claims: {}, entries: {}, settings: {} },
@@ -50,7 +51,20 @@
     return entry && entry.itemId === itemId ? entry.text : null;
   }
 
-  // 입력 칸에 보여 줄 글: 쓰던 글 → 저장된 글 → (문장 틀 대상이면) 문장 틀
+  // 쓰기 도움 학생: 교사 화면에서 켠 학생(settings.supportIds) 또는 data.js의 SUPPORT_STUDENTS
+  function isSupport() {
+    const sid = myId();
+    const ids = String(state.db.settings.supportIds || '').split(',');
+    return ids.includes(sid) || SUPPORT_STUDENTS.includes(sid);
+  }
+
+  // 지금 자료의 낱말 고르기 보기. 쓰기 도움 학생이 아니거나 보기가 없는 자료면 null.
+  function helperChoices() {
+    const id = myItemId();
+    return isSupport() && id && SUPPORT_CHOICES[id] ? SUPPORT_CHOICES[id] : null;
+  }
+
+  // 입력 칸에 보여 줄 글: 쓰던 글 → 저장된 글 → (쓰기 도움인데 보기가 없는 자료면) 문장 틀
   function currentText() {
     const sid = myId();
     const itemId = myItemId();
@@ -58,7 +72,7 @@
     if (d && d.sid === sid && d.itemId === itemId) return d.text;
     const saved = savedText(sid, itemId);
     if (saved !== null) return saved;
-    return SUPPORT_STUDENTS.includes(sid) ? SENTENCE_FRAME : '';
+    return isSupport() && !helperChoices() ? SENTENCE_FRAME : '';
   }
 
   function isDirty() {
@@ -287,6 +301,7 @@
           <label for="entry-text">${icon('pencil')}나의 탐사 보고</label>
           <div class="guide">
             <span>어디에서?</span><span>어떤 문제가?</span><span>얼마나 심각한가?</span>
+            ${helperChoices() ? `<button class="helper-open" data-action="helper-open">${icon('sparkle')}낱말 골라 문장 만들기</button>` : ''}
           </div>
           <textarea id="entry-text" rows="5" maxlength="${TEXT_MAX}"
             placeholder="어디에서 어떤 문제가 일어나고 있나요? 얼마나 심각한가요?">${esc(text)}</textarea>
@@ -381,13 +396,90 @@
         </section>`;
     }).join('');
     return `
-      ${pageHead('정리', '친구 보고서 살펴보기', '친구들이 정리한 내용을 읽고 정리표의 빈칸을 채워요.')}
+      ${pageHead('정리', '친구 보고서 살펴보기', '다른 모둠 친구들의 보고서를 다시 읽고, 활동지 표에서 비어 있는 칸을 확인해요.')}
       ${sections}`;
   }
 
   function renderOverlay() {
     if (state.explain) renderExplain();
+    else if (state.helper) renderHelper();
     else renderDetail();
+  }
+
+  // ---------- 낱말 골라 문장 만들기(쓰기 도움 학생) ----------
+  const HELPER_STEPS = [
+    ['where', '어디에서?', '어디에서 일어난 일인가요?'],
+    ['what', '어떤 문제가?', '어떤 문제가 일어나고 있나요?'],
+    ['how', '얼마나 심각한가?', '얼마나 심각한가요?'],
+  ];
+
+  // 보기 순서는 자료마다 섞되, 열 때마다 바뀌지 않게 고정한다.
+  function helperOptions(field) {
+    const id = myItemId();
+    const seed = [...(id + field)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+    return seededShuffle(SUPPORT_CHOICES[id][field], seed);
+  }
+
+  function helperSentence(picks, blank) {
+    const b = (v) => (v ? blank(v) : '<span class="blank">______</span>');
+    return `${b(picks.where)}에서 ${b(picks.what)}. ${b(picks.how)}`;
+  }
+
+  function renderHelper() {
+    const choices = helperChoices();
+    if (!choices) {
+      state.helper = null;
+      modalRoot.innerHTML = '';
+      return;
+    }
+    const it = itemsById[myItemId()];
+    const { step, picks } = state.helper;
+    const [field, , question] = HELPER_STEPS[step];
+    const tabs = HELPER_STEPS.map(([f, label], i) => `
+      <button class="hstep ${i === step ? 'on' : ''} ${picks[f] ? 'done' : ''}" data-action="helper-step" data-step="${i}">
+        <span>${picks[f] ? icon('check') : i + 1}</span>${label}
+      </button>`).join('');
+    const options = helperOptions(field).map((v) => `
+      <button class="hchoice" data-action="helper-pick" data-value="${esc(v)}" aria-pressed="${picks[field] === v}">${esc(v)}</button>`).join('');
+    const allPicked = HELPER_STEPS.every(([f]) => picks[f]);
+    modalRoot.innerHTML = `
+      <div class="overlay" data-action="helper-close">
+        <div class="modal helper-modal" role="dialog" aria-modal="true" aria-label="낱말 골라 문장 만들기">
+          <button class="close" data-action="helper-close" aria-label="닫기">${icon('x')}</button>
+          <aside class="hsource">
+            <span class="kicker">자료 ${ITEM_NO[it.id]}</span>
+            <h3>${esc(it.title)}</h3>
+            <p>${esc(it.body)}</p>
+          </aside>
+          <section class="hmain">
+          <div class="hsteps">${tabs}</div>
+          <h2>${question}</h2>
+          <p class="hhint">왼쪽 자료를 다시 읽고 알맞은 것을 골라요.</p>
+          <div class="hchoices">${options}</div>
+          <div class="hpreview">
+            <span class="hpreview-label">만들어지는 문장</span>
+            <p>${helperSentence(picks, (v) => `<b>${esc(v)}</b>`)}</p>
+          </div>
+          <div class="hactions">
+            <button class="btn btn-ghost btn-large" data-action="helper-step" data-step="${Math.max(0, step - 1)}" ${step === 0 ? 'disabled' : ''}>${icon('arrowLeft')}이전</button>
+            ${allPicked
+              ? `<button class="btn btn-large" data-action="helper-insert">${icon('pencil')}보고서에 넣기</button>`
+              : `<button class="btn btn-large" data-action="helper-step" data-step="${Math.min(2, step + 1)}" ${picks[field] ? '' : 'disabled'}>다음 ${icon('arrowRight')}</button>`}
+          </div>
+          </section>
+        </div>
+      </div>`;
+  }
+
+  function helperInsert() {
+    const p = state.helper.picks;
+    const sentence = `${p.where}에서 ${p.what}. ${p.how}`;
+    const cur = currentText().trim();
+    const text = !cur || cur === SENTENCE_FRAME.trim() ? sentence : `${cur} ${sentence}`;
+    setDraft({ sid: myId(), itemId: myItemId(), text: text.slice(0, TEXT_MAX) });
+    state.helper = null;
+    render();
+    toast('문장을 넣었어요. 읽어 보고 저장을 눌러요.');
   }
 
   // 직소 때 친구에게 보여 주는 전체 화면: 사진을 크게, 그 아래 내가 쓴 문장을 크게
@@ -614,6 +706,29 @@
       case 'close-explain':
         closeExplain();
         break;
+      case 'helper-open':
+        state.helper = { step: 0, picks: {} };
+        renderOverlay();
+        break;
+      case 'helper-close':
+        if (el.classList.contains('overlay') && e.target !== el) return;
+        state.helper = null;
+        renderOverlay();
+        break;
+      case 'helper-step':
+        state.helper.step = Number(el.dataset.step);
+        renderOverlay();
+        break;
+      case 'helper-pick': {
+        const [field] = HELPER_STEPS[state.helper.step];
+        state.helper.picks[field] = el.dataset.value;
+        if (state.helper.step < HELPER_STEPS.length - 1) state.helper.step += 1;
+        renderOverlay();
+        break;
+      }
+      case 'helper-insert':
+        helperInsert();
+        break;
     }
   });
 
@@ -626,6 +741,11 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.explain) {
       closeExplain();
+      return;
+    }
+    if (e.key === 'Escape' && state.helper) {
+      state.helper = null;
+      renderOverlay();
       return;
     }
     if (e.key === 'Escape' && state.openItemId && !document.querySelector('.confirm')) {
