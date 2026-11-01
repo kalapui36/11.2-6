@@ -182,7 +182,7 @@
         </div>
         <nav class="tabs">${nav}</nav>
       </header>
-      <main>${content}</main>`;
+      <main class="${state.view === 'status' ? 'fit' : ''}">${content}</main>`;
   }
 
   function renderStatus() {

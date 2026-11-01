@@ -142,6 +142,13 @@
       </div>`;
   }
 
+  // 스크롤 없이 한 화면에 맞추는 탭: 내 보고서, 비어 있거나 잠긴 화면. 자료실과 열린 친구 보고서는 스크롤한다.
+  function fitMain() {
+    if (state.tab === 'mine') return true;
+    if (state.tab === 'friends') return !state.db.settings.friendsOpen;
+    return false;
+  }
+
   function renderMain() {
     const group = groupsById[state.me.group];
     const friendsOpen = !!state.db.settings.friendsOpen;
@@ -177,7 +184,7 @@
         </div>
         <nav class="tabs" role="tablist">${tabs}</nav>
       </header>
-      <main>${content}</main>`;
+      <main class="${fitMain() ? 'fit' : ''}">${content}</main>`;
   }
 
   function pageHead(step, title, desc, side = '') {

@@ -240,6 +240,24 @@ button:disabled { cursor: not-allowed; }
 .nchoice:hover { transform: translateY(-1px); box-shadow: var(--sh-2); }
 .nchoice[aria-pressed="true"] { background: var(--navy-900); color: #fff; box-shadow: 0 4px 0 #050f1d; }
 
+/* 넓은 화면: 입장 화면을 스크롤 없이 한 화면에 맞춘다(화면 높이에 따라 간격과 크기를 줄임). */
+@media (min-width: 1001px) {
+  .entry { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+  .entry-hero { padding: clamp(1.5rem, 6vh, 3.5rem) 4vw 0; }
+  .entry-hero h1 { font-size: min(3.2rem, 7.5vh); }
+  .entry-question { margin-top: clamp(0.8rem, 3vh, 1.6rem); }
+  .entry-cover { flex: 1 1 0; min-height: 0; width: 100%; max-width: 26rem; height: auto; object-fit: contain; object-position: center bottom; align-self: center; margin: clamp(0.8rem, 3vh, 1.6rem) 0 0; }
+  .entry-form { padding: clamp(1rem, 4vh, 3rem) 5vw; overflow: auto; }
+  .entry-form .guide-bubble { margin-bottom: clamp(0.6rem, 3vh, 1.8rem); }
+  .entry-form .guide-bubble .mascot { width: clamp(3rem, 9vh, 4.6rem); height: clamp(3rem, 9vh, 4.6rem); }
+  .step-head { margin-bottom: clamp(0.4rem, 1.6vh, 0.9rem); }
+  .step-head + .gchoice-list { margin-bottom: clamp(0.8rem, 4vh, 2.2rem); }
+  .gchoice { padding: clamp(0.45rem, 1.8vh, 1rem) 1.1rem; }
+  .gchoice-icon { width: clamp(2.3rem, 6.5vh, 3.2rem); height: clamp(2.3rem, 6.5vh, 3.2rem); }
+  .nchoice { height: clamp(2.8rem, 8vh, 4.2rem); }
+  .nchoice-row { margin-bottom: clamp(0.8rem, 4.5vh, 2.4rem); }
+}
+
 @media (max-width: 1000px) {
   .entry { grid-template-columns: 1fr; }
   .entry-hero { padding: 2rem 1.5rem; }
@@ -293,6 +311,33 @@ main { padding: 1.6rem 1.5rem 3rem; max-width: 1760px; margin: 0 auto; }
 .page-head { display: flex; align-items: flex-start; gap: 0.9rem; margin: 0 0 1.4rem; }
 .page-head > div { flex: 1; }
 .page-head > .team-progress { flex: none; }
+
+/* 한 화면에 꽉 맞추는 화면(main.fit: 내 보고서, 잠긴 친구 보고서 등). 넓은 화면에서만 스크롤 없이 맞추고,
+   좁은 화면에서는 원래대로 아래로 스크롤한다. */
+@media (min-width: 1101px) and (min-height: 540px) {
+  #app:has(> main.fit) { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+  #app:has(> main.fit) > .topbar { flex: none; }
+  main.fit { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; padding-bottom: 1.2rem; }
+  main.fit > .page-head { flex: none; }
+  main.fit > .empty { margin: auto; }
+  main.fit .mine-layout { flex: 1; min-height: 0; align-items: stretch; }
+  main.fit .paper { display: flex; flex-direction: column; min-height: 0; }
+  main.fit .paper-img { flex: 1 1 0; min-height: 5rem; aspect-ratio: auto; }
+  main.fit .paper-body { flex: none; max-height: 70%; overflow: auto; }
+  main.fit .writer { position: static; display: flex; flex-direction: column; min-height: 0; }
+  main.fit .writer textarea { flex: 1 1 0; min-height: 5rem; resize: none; }
+}
+@media (min-width: 1101px) and (max-height: 780px) {
+  main.fit { padding-top: 0.9rem; }
+  main.fit .page-head { margin-bottom: 0.7rem; }
+  main.fit .paper-body { padding: 0.9rem 1.3rem 1rem; }
+  main.fit .writer { padding: 1rem 1.3rem; }
+  main.fit .steps { margin-bottom: 0.7rem; }
+  main.fit .writer-meta { margin: 0.3rem 0 0.6rem; }
+  main.fit .writer-tip { display: none; }
+  main.fit > .empty { padding: 1.5rem 2rem; }
+  main.fit > .empty .empty-img { width: 8rem; }
+}
 
 /* ---------- 관련 자료 링크 ---------- */
 .more-link {
@@ -642,22 +687,22 @@ main { padding: 1.6rem 1.5rem 3rem; max-width: 1760px; margin: 0 auto; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.2rem 3vw 2.5rem;
+  padding: 1.2rem 3vw clamp(1rem, 4vh, 2.5rem);
   background: radial-gradient(circle at 50% 0%, #1d4373, var(--navy-900) 70%);
   color: #fff;
   overflow: auto;
   text-align: center;
   animation: fade 0.2s ease-out;
 }
-.explain-top { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 1rem; }
+.explain-top { flex: none; display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: clamp(0.5rem, 2vh, 1rem); }
 .explain-top .gchip { background: rgba(255, 255, 255, 0.12); color: #fff; }
 .explain-close { background: rgba(255, 255, 255, 0.1); color: #fff; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25); }
 .explain-close:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
-.explain-img { max-width: min(1200px, 100%); }
-.explain-img img { display: block; width: auto; height: 56vh; max-width: 100%; object-fit: contain; border-radius: var(--r-lg); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); }
-.explain-title { margin: 1.4rem 0 0.6rem; color: #a9c4e6; font-size: 1.2rem; font-weight: 700; }
-.explain-text { margin: 0; max-width: 1400px; font-size: 2.3rem; font-weight: 800; line-height: 1.5; letter-spacing: -0.02em; }
-.explain-text.none { color: #a9c4e6; font-weight: 500; font-size: 1.6rem; }
+.explain-img { flex: 1 1 0; min-height: 30vh; display: flex; justify-content: center; width: 100%; max-width: min(1200px, 100%); }
+.explain-img img { display: block; width: auto; height: 100%; max-width: 100%; object-fit: contain; border-radius: var(--r-lg); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); }
+.explain-title { flex: none; margin: clamp(0.6rem, 2vh, 1.4rem) 0 0.4rem; color: #a9c4e6; font-size: 1.2rem; font-weight: 700; }
+.explain-text { flex: none; margin: 0; max-width: 1400px; font-size: min(2.3rem, 5vh); font-weight: 800; line-height: 1.45; letter-spacing: -0.02em; }
+.explain-text.none { color: #a9c4e6; font-weight: 500; font-size: min(1.6rem, 4vh); }
 
 /* ---------- 친구 카드 ---------- */
 .fgroup { margin-bottom: 2.2rem; }
