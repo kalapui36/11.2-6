@@ -7,13 +7,18 @@
   const TOTAL = GROUPS.length * MEMBERS_PER_GROUP;
 
   // 칠판 모드 단계. 학생이 봐도 되는 내용만 나온다(이름, 주제 분류 없음).
+  // 수업 지도안 흐름. minutes가 있는 단계는 타이머가 그 시간으로 맞춰진다.
   const BOARD_STAGES = [
-    { id: 'question',  label: '탐구 질문' },
-    { id: 'act1',      label: '활동1', timer: true },
-    { id: 'act2',      label: '활동2', timer: true },
-    { id: 'act3',      label: '활동3', timer: true },
-    { id: 'overlap',   label: '정리① 겹친 자료' },
-    { id: 'remaining', label: '정리② 남은 자료' },
+    { id: 'motivation', label: '동기 유발' },
+    { id: 'question',   label: '탐구 질문' },
+    { id: 'activities', label: '활동 안내' },
+    { id: 'act1',       label: '활동1', minutes: 10 },
+    { id: 'act2',       label: '활동2', minutes: 5 },
+    { id: 'act3',       label: '활동3', minutes: 15 },
+    { id: 'overlap',    label: '정리①' },
+    { id: 'summary',    label: '정리②' },
+    { id: 'postit',     label: '정리③', minutes: 3 },
+    { id: 'preview',    label: '차시 예고' },
   ];
 
   const state = {
@@ -23,7 +28,7 @@
     openItemId: null,          // 남은 자료 상세
     board: null,               // 칠판 모드 단계 번호, 꺼져 있으면 null
     boardReveal: false,        // 칠판 모드 남은 자료 공개 여부
-    timer: { duration: 300, left: 300, running: false, endAt: 0 },
+    timer: { stageId: null, duration: 0, left: 0, running: false, endAt: 0 },
     db: { claims: {}, entries: {}, settings: {} },
   };
 
@@ -343,35 +348,67 @@
     const c = counts();
     let body = '';
 
-    if (stage.id === 'question') {
+    if (stage.id === 'motivation') {
       body = `
-        <img class="b-cover" src="${UI_IMG}cover.webp" alt="">
-        <p class="b-kicker">탐구 질문</p>
-        <h1 class="b-question">지구촌을 위협하는 문제에는<br>어떤 것들이 있을까요?</h1>
+        <p class="b-kicker">동기 유발</p>
+        <div class="b-motivation">
+          <div class="b-photos">
+            <figure><img src="images/items/korea-summer.webp" alt=""><figcaption>서울의 무더위쉼터 안내판</figcaption></figure>
+            <figure><img src="images/items/hottest-year.webp" alt=""><figcaption>2024년 세계 기온 지도 (빨갈수록 평소보다 더움)</figcaption></figure>
+          </div>
+          <ol class="b-asks">
+            <li>올여름 더위를 겪으며 어떤 일이 있었나요?</li>
+            <li>이 더위는 지난 시간에 알아본 지구촌 문제 중 무엇과 관련이 있을까요?</li>
+          </ol>
+        </div>`;
+    } else if (stage.id === 'question') {
+      body = `
+        <div class="b-center">
+          <img class="b-cover" src="${UI_IMG}cover.webp" alt="">
+          <p class="b-kicker">탐구 질문</p>
+          <h1 class="b-question">지구촌을 위협하는 문제에는<br>어떤 것들이 있을까요?</h1>
+        </div>`;
+    } else if (stage.id === 'activities') {
+      const acts = [
+        ['활동 1', '우리 모둠 자료 찾기', '10분', '섞여 있는 자료 가운데 우리 모둠 주제에 해당하는 자료를 찾아, 한 사람이 하나씩 가져가요.'],
+        ['활동 2', '맡은 사례 정리하기', '5분', '가져간 자료의 문제 상황과 심각성을 1~2문장으로 정리해 웹앱에 올려요.'],
+        ['활동 3', '친구에게 설명하고 정리하기', '15분', '같은 번호끼리 새 모둠을 만들어 서로 설명하고, 활동지 정리표를 채워요.'],
+      ].map(([k, t, m, d]) => `
+        <div class="b-act">
+          <span class="b-act-no">${k}</span>
+          <h2>${t}</h2>
+          <p>${d}</p>
+          <span class="b-act-time">${icon('calendar')}${m}</span>
+        </div>`).join('');
+      body = `
+        <p class="b-kicker">탐구 활동 안내</p>
+        <h1>오늘은 이렇게 탐구해요</h1>
+        <div class="b-acts">${acts}</div>
         <div class="b-groups">${GROUPS.map((g) => {
           const st = GROUP_STYLE[g.id];
           return `<span style="--g:${st.color};--gs:${st.soft}">${emblem(g.id)}${esc(g.name)}</span>`;
         }).join('')}</div>`;
     } else if (stage.id === 'act1') {
       body = `
-        <p class="b-kicker">활동 1</p>
-        <h1>우리 모둠 주제에 맞는 자료 찾기</h1>
+        <p class="b-kicker">활동 1 · 10분</p>
+        <h1>우리 모둠 자료 찾기</h1>
         <ol class="b-steps">
-          <li>'탐사 자료실'에서 카드를 눌러 자료를 읽어요.</li>
-          <li>우리 모둠 주제에 해당하는 자료를 <b>한 사람이 하나씩</b> 가져가요.</li>
-          <li>우리 모둠 친구가 이미 가져간 자료는 가져갈 수 없어요.</li>
+          <li>우리 모둠이 맡은 지구촌 문제는 무엇인가요?</li>
+          <li>자료 가운데 <b>우리 모둠 주제에 해당하는 자료</b>는 무엇인가요?</li>
+          <li><b>지구촌을 위협하는 문제를 다룬 자료가 아닌 것</b>은 무엇인가요?</li>
+          <li>모둠원이 각자 맡을 사례를 하나씩 정해 <b>가져가기</b>를 눌러요.</li>
         </ol>
         ${progress('자료를 가져간 사람', c.claimed)}`;
     } else if (stage.id === 'act2') {
       body = `
-        <p class="b-kicker">활동 2</p>
-        <h1>문제 상황과 심각성 정리하기</h1>
+        <p class="b-kicker">활동 2 · 5분</p>
+        <h1>맡은 사례 정리하기</h1>
         <ol class="b-steps">
-          <li>'내 보고서'에서 자료를 다시 읽어요.</li>
-          <li><b>어디에서 어떤 문제</b>가 일어나는지, <b>얼마나 심각한지</b> 1~2문장으로 써요.</li>
-          <li>다 쓰면 <b>저장</b>을 눌러요.</li>
+          <li>맡은 사례에서는 <b>어떤 문제</b>가 일어나고 있나요?</li>
+          <li>그 문제는 <b>얼마나 심각한가요?</b></li>
+          <li>정리한 내용을 '내 보고서'에 쓰고 <b>저장</b>을 눌러요.</li>
         </ol>
-        <p class="b-example">예) ○○에서 ○○ 문제가 일어나고 있습니다. ○○할 만큼 심각합니다.</p>
+        <p class="b-example">예) 투발루의 섬들이 바닷물에 잠기고 있습니다. 9개 섬 가운데 2개가 이미 거의 잠길 만큼 심각합니다.</p>
         ${progress('정리를 저장한 사람', c.written)}`;
     } else if (stage.id === 'act3') {
       const teams = NUMS.map((n) => `
@@ -380,38 +417,70 @@
           <ul>${GROUPS.map((g) => `<li>${emblem(g.id)}${esc(g.name)} ${n}번</li>`).join('')}</ul>
         </div>`).join('');
       body = `
-        <p class="b-kicker">활동 3</p>
-        <h1>같은 번호끼리 모여 브리핑하기</h1>
+        <p class="b-kicker">활동 3 · 15분</p>
+        <h1>친구에게 설명하고 정리하기</h1>
         <div class="b-teams">${teams}</div>
         <ol class="b-steps compact">
-          <li>'내 보고서'에서 <b>설명 모드</b>를 켜고 친구에게 보여 주며 브리핑해요.</li>
-          <li>친구의 설명을 듣고 정리표를 채워요.</li>
+          <li>'내 보고서'에서 <b>설명 모드</b>를 켜고, 사진을 보여 주며 내가 맡은 문제를 설명해요.</li>
+          <li>친구의 설명을 들으며 <b>활동지 정리표</b>를 채워요.</li>
         </ol>`;
     } else if (stage.id === 'overlap') {
       body = `
-        <p class="b-kicker">정리</p>
-        <h1>여러 모둠이 함께 고른 자료</h1>
-        <p class="b-sub">왜 여러 모둠이 같은 자료를 골랐을까요?</p>
+        <p class="b-kicker">정리 ①</p>
+        <h1>두 가지 문제에 모두 해당하는 사례가 있었나요?</h1>
         ${overlapCards()}`;
-    } else if (stage.id === 'remaining') {
+    } else if (stage.id === 'summary') {
+      const cols = GROUPS.map((g) => {
+        const st = GROUP_STYLE[g.id];
+        const ids = [...new Set(NUMS.map((n) => claimOf(makeStudentId(g.id, n))).filter(Boolean))];
+        const list = ids.length
+          ? ids.map((id) => `<li><em>${ITEM_NO[id]}</em>${esc(itemsById[id].title)}</li>`).join('')
+          : '<li class="none">아직 모은 자료가 없어요.</li>';
+        return `
+          <div class="b-col" style="--g:${st.color};--gs:${st.soft}">
+            <h3>${emblem(g.id)}${esc(g.name)}</h3>
+            <ul>${list}</ul>
+          </div>`;
+      }).join('');
       body = `
-        <p class="b-kicker">정리</p>
-        <h1>아무도 가져가지 않은 자료</h1>
+        <p class="b-kicker">정리 ②</p>
+        <h1>지구촌을 위협하는 문제에는 어떤 것들이 있나요?</h1>
+        <div class="b-cols">${cols}</div>
+        <p class="b-note">여러 문제가 서로 얽혀 있기도 해요.</p>`;
+    } else if (stage.id === 'postit') {
+      body = `
+        <div class="b-center">
+          <p class="b-kicker">정리 ③</p>
+          <h1>탐구 질문에 대한 생각을<br>포스트잇에 한 문장으로 써 봅시다</h1>
+          <div class="b-postit">
+            <span>탐구 질문</span>
+            <p>지구촌을 위협하는 문제에는 어떤 것들이 있을까요?</p>
+          </div>
+          <p class="b-example">예) 지구촌을 위협하는 문제에는 투발루의 섬이 바닷물에 잠기는 기후변화 문제, 수단 사람들이 전쟁으로 살 곳을 잃는 난민 문제 등이 있습니다.</p>
+        </div>`;
+    } else if (stage.id === 'preview') {
+      body = `
+        <p class="b-kicker">차시 예고</p>
+        <h1>아무 모둠도 가져가지 않은 자료들은 무엇에 관한 자료인가요?</h1>
         ${state.boardReveal
-          ? `${remainingCards()}<p class="b-next">다음 시간에는 지구촌 문제를 해결하기 위한 노력을 알아봅시다.</p>`
+          ? `${remainingCards()}<p class="b-next">다음 시간에는 이 문제들을 해결하기 위해 어떤 사람들과 단체가 노력하고 있는지 살펴보겠습니다.</p>`
           : `<div class="reveal"><button class="btn btn-large btn-sun" data-action="board-reveal">${icon('eye')}남은 자료 보기</button></div>`}`;
     }
 
     const dots = BOARD_STAGES.map((s, i) => `
       <button class="b-dot" data-action="board-go" data-stage="${i}" aria-current="${i === state.board}">${s.label}</button>`).join('');
+    const friendsOpen = !!state.db.settings.friendsOpen;
 
     app.innerHTML = `
       <div class="b-screen">
-        ${stage.timer ? timerHtml() : ''}
-        <div class="b-body">${body}</div>
+        ${stage.minutes ? timerHtml() : ''}
+        <div class="b-body stage-${stage.id}">${body}</div>
         <nav class="b-nav">
           <button class="btn btn-ghost" data-action="board-prev" ${state.board === 0 ? 'disabled' : ''}>${icon('arrowLeft')}이전</button>
           <div class="b-dots">${dots}</div>
+          <button class="b-mini-switch ${friendsOpen ? 'on' : ''}" data-action="toggle-friends" title="학생 화면의 친구 보고서 탭">
+            ${icon(friendsOpen ? 'unlock' : 'lock')}친구 보고서 ${friendsOpen ? '열림' : '닫힘'}
+          </button>
           <button class="btn" data-action="board-next" ${state.board === BOARD_STAGES.length - 1 ? 'disabled' : ''}>다음${icon('arrowRight')}</button>
           <button class="btn-text b-exit" data-action="board-exit">${icon('x')}나가기</button>
         </nav>
@@ -429,6 +498,7 @@
   }
 
   // ---------- 타이머 (칠판 모드 활동 단계) ----------
+  // 활동 단계에 들어가면 지도안 시간으로 맞춰지고, -1분 / +1분으로 조절한다.
   function timerLeft() {
     const t = state.timer;
     return t.running ? Math.max(0, Math.round((t.endAt - Date.now()) / 1000)) : t.left;
@@ -438,16 +508,30 @@
     return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
   }
 
+  function setStageTimer(stage) {
+    state.timer = { stageId: stage.id, duration: stage.minutes * 60, left: stage.minutes * 60, running: false, endAt: 0 };
+  }
+
+  function adjustTimer(minutes) {
+    const t = state.timer;
+    if (t.running) {
+      t.endAt = Math.max(Date.now(), t.endAt + minutes * 60000);
+    } else {
+      t.left = Math.max(0, t.left + minutes * 60);
+    }
+    render();
+  }
+
   function timerHtml() {
     const left = timerLeft();
-    const presets = [3, 5, 7, 10].map((m) => `<button data-action="timer-set" data-min="${m}">${m}분</button>`).join('');
     return `
       <div class="b-timer ${left === 0 ? 'ended' : ''}">
         <div id="timer-display" class="t-display">${left === 0 ? '시간 끝!' : fmt(left)}</div>
         <div class="t-controls">
-          ${presets}
+          <button data-action="timer-minus">−1분</button>
           <button data-action="timer-toggle" aria-label="${state.timer.running ? '멈춤' : '시작'}">${icon(state.timer.running ? 'pause' : 'play')}</button>
-          <button data-action="timer-reset" aria-label="다시">${icon('reset')}</button>
+          <button data-action="timer-plus">+1분</button>
+          <button data-action="timer-reset" aria-label="처음 시간으로">${icon('reset')}</button>
         </div>
       </div>`;
   }
@@ -504,6 +588,8 @@
 
   function boardGo(i) {
     state.board = Math.max(0, Math.min(BOARD_STAGES.length - 1, i));
+    const stage = BOARD_STAGES[state.board];
+    if (stage.minutes && !state.timer.running && state.timer.stageId !== stage.id) setStageTimer(stage);
     render();
   }
 
@@ -581,9 +667,11 @@
         state.boardReveal = true;
         render();
         break;
-      case 'timer-set':
-        state.timer = { duration: Number(el.dataset.min) * 60, left: Number(el.dataset.min) * 60, running: false, endAt: 0 };
-        render();
+      case 'timer-minus':
+        adjustTimer(-1);
+        break;
+      case 'timer-plus':
+        adjustTimer(1);
         break;
       case 'timer-toggle': {
         const t = state.timer;
