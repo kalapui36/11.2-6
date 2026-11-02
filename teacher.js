@@ -42,7 +42,9 @@
     openItemId: null,          // 남은 자료 상세
     openStudent: null,         // 현황판에서 누른 학생(쓰기 도움 켜기/끄기)
     board: savedBoard ? savedBoard.board : null,   // 칠판 모드 단계 번호, 꺼져 있으면 null
-    boardReveal: savedBoard ? !!savedBoard.reveal : false,   // 칠판 모드 남은 자료 공개 여부
+    boardStep: savedBoard ? (savedBoard.step || 0) : 0,     // 이 장에서 나타난 요소 수(PPT 애니메이션)
+    animStep: null,            // 방금 나타난 요소(움직임 한 번만)
+    animSlide: false,          // 방금 넘어온 장(장 전환 움직임 한 번만)
     timer: (savedBoard && savedBoard.timer) || { stageId: null, duration: 0, left: 0, running: false, endAt: 0 },
     db: { claims: {}, entries: {}, settings: {}, online: {} },
   };
@@ -50,7 +52,7 @@
   function saveBoard() {
     try {
       if (state.board === null) sessionStorage.removeItem(BOARD_KEY);
-      else sessionStorage.setItem(BOARD_KEY, JSON.stringify({ board: state.board, reveal: state.boardReveal, timer: state.timer }));
+      else sessionStorage.setItem(BOARD_KEY, JSON.stringify({ board: state.board, step: state.boardStep, timer: state.timer }));
     } catch (e) { /* 저장 못 해도 수업은 계속 */ }
   }
 
@@ -93,20 +95,12 @@
 
   const SHORT_NAME = { resource: '자원·에너지', climate: '기후변화', ecosystem: '생태계 파괴', refugee: '난민' };
 
-  // 수업이 시작됐는지(한 명이라도 접속하거나 자료를 가져감). 시작 전에는 '접속 안 함'을 표시하지 않는다.
-  function classStarted() {
-    return Store.mode === 'firebase' && allStudentIds().some((sid) => deviceCount(sid) > 0 || claimOf(sid));
-  }
-  function isAway(sid) {
-    return classStarted() && !claimOf(sid) && deviceCount(sid) === 0;
-  }
-
   // 원래 모둠 자리 그림: 전자칠판을 위에 두고 모둠마다 책상 5개(3+2)
   function homeSeatMap() {
     const cols = Math.max(...SEAT_MAP.home.map((s) => s.col));
     const clusters = SEAT_MAP.home.map(({ group, col, row }) => {
       const st = GROUP_STYLE[group];
-      const desks = NUMS.map((n) => `<span class="desk ${isAway(makeStudentId(group, n)) ? 'away' : ''}">${n}</span>`).join('');
+      const desks = NUMS.map((n) => `<span class="desk">${n}</span>`).join('');
       return `
         <div class="seat-group" style="grid-column:${col};grid-row:${row};--g:${st.color};--gs:${st.soft}">
           <div class="seat-head">${emblem(group)}<b>${esc(groupsById[group].name)}</b></div>
@@ -126,9 +120,8 @@
     const clusters = SEAT_MAP.jigsaw.map(({ team, col, row }) => {
       const desks = GROUPS.map((g) => {
         const st = GROUP_STYLE[g.id];
-        const away = isAway(makeStudentId(g.id, team));
         return `
-          <span class="desk topic ${away ? 'away' : ''}" style="--g:${st.color};--gs:${st.soft}">
+          <span class="desk topic" style="--g:${st.color};--gs:${st.soft}">
             ${emblem(g.id)}<b>${SHORT_NAME[g.id]}</b><small>${team}번</small>
           </span>`;
       }).join('');
@@ -138,9 +131,11 @@
           <div class="desks four">${desks}</div>
         </div>`;
     }).join('');
-    const anyAway = allStudentIds().some(isAway);
-    return `<div class="seat-grid jig" style="grid-template-columns:repeat(${cols}, minmax(0, 1fr))">${clusters}</div>
-      ${anyAway ? '<p class="seat-legend"><span class="desk-swatch"></span>흐린 점선 자리: 아직 접속하지 않은 학생(결석이면 그 모둠은 한 주제를 선생님이 안내)</p>' : ''}`;
+    return `
+      <div class="seat-map jig-map">
+        <div class="seat-board">전자칠판</div>
+        <div class="seat-grid jig" style="grid-template-columns:repeat(${cols}, minmax(0, 1fr))">${clusters}</div>
+      </div>`;
   }
 
   // 자료가 그 모둠 주제에 맞는지(해결 노력 자료나 다른 주제 자료면 false)
@@ -215,6 +210,7 @@
       renderBoard();
       return;
     }
+    app.__html = null;   // 칠판 화면 기억을 지워 다시 칠판으로 갈 때 새로 그리게 한다
     renderDashboard();
     renderItemModal();
   }
@@ -364,26 +360,6 @@
     if (!list.length) return `<div class="empty"><div class="empty-icon">${icon('link')}</div><p>아직 두 모둠 이상이 함께 가져간 자료가 없어요.</p></div>`;
     return `<div class="big-grid">${list.map(({ item, groups }) => itemCard(item, `
       <div class="chips">${groups.map((g) => groupChip(g, groupsById[g].name)).join('')}</div>`)).join('')}</div>`;
-  }
-
-  // 칠판 정리①: 두 문제에 함께 해당하는 자료 가운데, 주제가 맞는 모둠이 가져간 것.
-  // 잘못 가져간 자료(해결 노력, 다른 주제)는 '겹친 사례'로 보여 주지 않는다.
-  function boardOverlapCards() {
-    const list = ITEMS
-      .filter((it) => (ITEM_TOPICS[it.id] || []).length >= 2)
-      .map((it) => ({
-        item: it,
-        groups: GROUPS.map((g) => g.id).filter((g) => fitsGroup(it.id, g) && NUMS.some((n) => claimOf(makeStudentId(g, n)) === it.id)),
-      }))
-      .filter((x) => x.groups.length)
-      .sort((a, b) => b.groups.length - a.groups.length);
-    if (!list.length) {
-      // 아무도 안 가져갔으면 예시 자료 하나로 이야기를 나눈다.
-      const ex = itemsById.tuvalu;
-      return `<div class="big-grid">${itemCard(ex, '<div class="chips"><span class="ask-chip">어떤 문제와 관련 있을까요?</span></div>')}</div>`;
-    }
-    return `<div class="big-grid">${list.map(({ item, groups }) => itemCard(item, `
-      <div class="chips">${groups.map((g) => groupChip(g, groupsById[g].name)).join('')}${groups.length < 2 ? '<span class="ask-chip">또 어떤 문제와 관련 있을까요?</span>' : ''}</div>`)).join('')}</div>`;
   }
 
   // 칠판 차시 예고: 해결 노력 자료(문제 자료는 학생 수보다 많아 항상 몇 개 남으므로 섞지 않는다)
@@ -563,6 +539,39 @@
   }
 
   // ---------- 칠판 모드 ----------
+  // PPT처럼 '다음'(→, Space, PageDown, 화면 클릭)을 누를 때마다 요소가 하나씩 나타난다.
+  // 한 장의 요소를 다 보이면 다음 장으로 넘어간다. 단계마다 나타나는 요소 수는 boardSteps()가 정한다.
+  function overlapList() {
+    return ITEMS
+      .filter((it) => (ITEM_TOPICS[it.id] || []).length >= 2)
+      .map((it) => ({
+        item: it,
+        groups: GROUPS.map((g) => g.id).filter((g) => fitsGroup(it.id, g) && NUMS.some((n) => claimOf(makeStudentId(g, n)) === it.id)),
+      }))
+      .filter((x) => x.groups.length)
+      .sort((a, b) => b.groups.length - a.groups.length);
+  }
+
+  function boardSteps(stage) {
+    switch (stage.id) {
+      case 'motivation': return 4;   // 사진1, 사진2, 질문1, 질문2
+      case 'question': return 1;     // 탐구 질문
+      case 'activities': return 3;   // 활동 1~3
+      case 'act1': return 4;         // 발문 4개
+      case 'act2': return 5;         // 발문 4개 + 예시
+      case 'overlap': return Math.max(1, overlapList().length);   // 카드 하나씩
+      case 'summary': return 5;      // 모둠 4칸 + 마무리 문장
+      case 'postit': return 1;       // 탐구 질문 포스트잇
+      case 'preview': return 2;      // 해결 노력 자료 + 다음 시간 안내
+      default: return 0;
+    }
+  }
+
+  // 나타나는 요소에 붙이는 class: 아직이면 숨김, 방금 나타났으면 움직임
+  function bs(n) {
+    return `bstep ${state.boardStep >= n ? 'shown' : ''} ${state.animStep === n ? 'anim' : ''}`;
+  }
+
   function renderBoard() {
     const stage = BOARD_STAGES[state.board];
     const c = counts();
@@ -592,12 +601,12 @@
         <p class="b-kicker">동기 유발</p>
         <div class="b-motivation">
           <div class="b-photos">
-            <figure><img src="images/board/heat-water.webp" alt=""><figcaption>무더위를 식히려고 물을 뿌리는 사람<small>사진: Instant Vantage, CC BY-SA 2.0, 위키미디어 공용</small></figcaption></figure>
-            <figure><img src="images/board/heat-watch.webp" alt=""><figcaption>스마트워치에 뜬 폭염 경보 (낮 기온 32~37℃)<small>사진: Dennis Sylvester Hurd, CC BY 2.0, 위키미디어 공용</small></figcaption></figure>
+            <figure class="${bs(1)}"><img src="images/board/heat-water.webp" alt=""><figcaption>무더위를 식히려고 물을 뿌리는 사람<small>사진: Instant Vantage, CC BY-SA 2.0, 위키미디어 공용</small></figcaption></figure>
+            <figure class="${bs(2)}"><img src="images/board/heat-watch.webp" alt=""><figcaption>스마트워치에 뜬 폭염 경보 (낮 기온 32~37℃)<small>사진: Dennis Sylvester Hurd, CC BY 2.0, 위키미디어 공용</small></figcaption></figure>
           </div>
           <ol class="b-asks">
-            <li>올여름 더위를 겪으며 어떤 일이 있었나요?</li>
-            <li>이 더위는 지난 시간에 알아본 지구촌 문제 중 무엇과 관련이 있을까요?</li>
+            <li class="${bs(3)}">올여름 더위를 겪으며 어떤 일이 있었나요?</li>
+            <li class="${bs(4)}">이 더위는 지난 시간에 알아본 지구촌 문제 중 무엇과 관련이 있을까요?</li>
           </ol>
         </div>`;
     } else if (stage.id === 'question') {
@@ -605,15 +614,15 @@
         <div class="b-center">
           <img class="b-cover" src="${UI_IMG}cover.webp" alt="">
           <p class="b-kicker">탐구 질문</p>
-          <h1 class="b-question">지구촌을 위협하는 문제에는<br>어떤 것들이 있을까요?</h1>
+          <h1 class="b-question ${bs(1)}">지구촌을 위협하는 문제에는<br>어떤 것들이 있을까요?</h1>
         </div>`;
     } else if (stage.id === 'activities') {
       const acts = [
         ['활동 1', '우리 모둠 자료 찾기', '10분', '섞여 있는 자료 가운데 우리 모둠 주제에 해당하는 자료를 찾아, 한 사람이 하나씩 가져가요.'],
         ['활동 2', '맡은 사례 정리하기', '5분', '가져간 자료의 문제 상황과 심각성을 1~2문장으로 정리해 웹앱에 올려요.'],
         ['활동 3', '친구에게 설명하고 정리하기', '15분', '같은 번호끼리 새 모둠을 만들어 서로 설명하고, 활동지 정리표를 채워요.'],
-      ].map(([k, t, m, d]) => `
-        <div class="b-act">
+      ].map(([k, t, m, d], i) => `
+        <div class="b-act ${bs(i + 1)}">
           <span class="b-act-no">${k}</span>
           <h2>${t}</h2>
           <p>${d}</p>
@@ -622,20 +631,16 @@
       body = `
         <p class="b-kicker">탐구 활동 안내</p>
         <h1>오늘은 이렇게 탐구해요</h1>
-        <div class="b-acts">${acts}</div>
-        <div class="b-groups">${GROUPS.map((g) => {
-          const st = GROUP_STYLE[g.id];
-          return `<span style="--g:${st.color};--gs:${st.soft}">${emblem(g.id)}${esc(g.name)}</span>`;
-        }).join('')}</div>`;
+        <div class="b-acts">${acts}</div>`;
     } else if (stage.id === 'act1') {
       body = `
         <p class="b-kicker">활동 1 · 10분</p>
         <h1>우리 모둠 자료 찾기</h1>
         <ol class="b-steps">
-          <li>우리 모둠이 맡은 지구촌 문제는 무엇인가요?</li>
-          <li>자료 가운데 <b>우리 모둠 주제에 해당하는 자료</b>는 무엇인가요?</li>
-          <li><b>지구촌을 위협하는 문제를 다룬 자료가 아닌 것</b>은 무엇인가요?</li>
-          <li>모둠원이 각자 맡을 사례를 하나씩 정해 <b>가져가기</b>를 눌러요.</li>
+          <li class="${bs(1)}">우리 모둠이 맡은 지구촌 문제는 무엇인가요?</li>
+          <li class="${bs(2)}">자료 가운데 <b>우리 모둠 주제에 해당하는 자료</b>는 무엇인가요?</li>
+          <li class="${bs(3)}"><b>지구촌을 위협하는 문제를 다룬 자료가 아닌 것</b>은 무엇인가요?</li>
+          <li class="${bs(4)}">모둠원이 각자 맡을 사례를 하나씩 정해 <b>가져가기</b>를 눌러요.</li>
         </ol>
         ${progress('자료를 가져간 사람', c.claimed)}`;
     } else if (stage.id === 'act2') {
@@ -643,12 +648,12 @@
         <p class="b-kicker">활동 2 · 5분</p>
         <h1>맡은 사례 정리하기</h1>
         <ol class="b-steps">
-          <li>맡은 사례에서는 <b>어떤 문제</b>가 일어나고 있나요?</li>
-          <li>그 문제는 <b>얼마나 심각한가요?</b></li>
-          <li>정리한 내용을 '내 보고서'에 쓰고 <b>저장</b>을 눌러요.</li>
-          <li>활동지 표에서 <b>우리 모둠 줄</b>의 □에 ✔ 표시하고, 그 줄을 먼저 채워요.</li>
+          <li class="${bs(1)}">맡은 사례에서는 <b>어떤 문제</b>가 일어나고 있나요?</li>
+          <li class="${bs(2)}">그 문제는 <b>얼마나 심각한가요?</b></li>
+          <li class="${bs(3)}">정리한 내용을 '내 보고서'에 쓰고 <b>저장</b>을 눌러요.</li>
+          <li class="${bs(4)}">활동지 표에서 <b>우리 모둠 줄</b>의 □에 ✔ 표시하고, 그 줄을 먼저 채워요.</li>
         </ol>
-        <p class="b-example">예) 투발루의 섬들이 바닷물에 잠기고 있습니다. 9개 섬 가운데 2개가 이미 거의 잠길 만큼 심각합니다.</p>
+        <p class="b-example ${bs(5)}">예) 투발루의 섬들이 바닷물에 잠기고 있습니다. 9개 섬 가운데 2개가 이미 거의 잠길 만큼 심각합니다.</p>
         ${progress('정리를 저장한 사람', c.written)}`;
     } else if (stage.id === 'act3') {
       body = `
@@ -660,12 +665,18 @@
           <li>친구의 설명을 듣고 <b>활동지 표의 빈칸</b>을 채워요.</li>
         </ol>`;
     } else if (stage.id === 'overlap') {
+      // 두 문제에 함께 해당하는 자료 가운데 주제가 맞는 모둠이 가져간 것만. 처음엔 비어 있다가 누를 때마다 한 장씩.
+      const list = overlapList();
+      const cards = list.length
+        ? list.map(({ item, groups }, i) => `<div class="${bs(i + 1)}">${itemCard(item, `
+            <div class="chips">${groups.map((g) => groupChip(g, groupsById[g].name)).join('')}${groups.length < 2 ? '<span class="ask-chip">또 어떤 문제와 관련 있을까요?</span>' : ''}</div>`)}</div>`).join('')
+        : `<div class="${bs(1)}">${itemCard(itemsById.tuvalu, '<div class="chips"><span class="ask-chip">어떤 문제와 관련 있을까요?</span></div>')}</div>`;
       body = `
         <p class="b-kicker">정리 ①</p>
         <h1>두 가지 문제에 모두 해당하는 사례가 있었나요?</h1>
-        ${boardOverlapCards()}`;
+        <div class="big-grid">${cards}</div>`;
     } else if (stage.id === 'summary') {
-      const cols = GROUPS.map((g) => {
+      const cols = GROUPS.map((g, i) => {
         const st = GROUP_STYLE[g.id];
         // 모둠 주제에 맞게 가져간 자료만 보여 준다(잘못 가져간 자료는 빼기).
         const ids = [...new Set(NUMS.map((n) => claimOf(makeStudentId(g.id, n))).filter((id) => id && fitsGroup(id, g.id)))];
@@ -673,7 +684,7 @@
           ? ids.map((id) => `<li><em>${ITEM_NO[id]}</em>${esc(itemsById[id].title)}</li>`).join('')
           : '<li class="none">아직 모은 자료가 없어요.</li>';
         return `
-          <div class="b-col" style="--g:${st.color};--gs:${st.soft}">
+          <div class="b-col ${bs(i + 1)}" style="--g:${st.color};--gs:${st.soft}">
             <h3>${emblem(g.id)}${esc(g.name)}</h3>
             <ul>${list}</ul>
           </div>`;
@@ -682,13 +693,13 @@
         <p class="b-kicker">정리 ②</p>
         <h1>지구촌을 위협하는 문제에는 어떤 것들이 있나요?</h1>
         <div class="b-cols">${cols}</div>
-        <p class="b-note">여러 문제가 서로 얽혀 있기도 해요.</p>`;
+        <p class="b-note ${bs(5)}">여러 문제가 서로 얽혀 있기도 해요.</p>`;
     } else if (stage.id === 'postit') {
       body = `
         <div class="b-center">
           <p class="b-kicker">정리 ③</p>
           <h1>탐구 질문에 대한 생각을<br>포스트잇에 한 문장으로 써 봅시다</h1>
-          <div class="b-postit">
+          <div class="b-postit ${bs(1)}">
             <span>탐구 질문</span>
             <p>지구촌을 위협하는 문제에는 어떤 것들이 있을까요?</p>
           </div>
@@ -697,30 +708,67 @@
       body = `
         <p class="b-kicker">차시 예고</p>
         <h1>아무 모둠도 가져가지 않은 자료들은 무엇에 관한 자료인가요?</h1>
-        ${state.boardReveal
-          ? `${effortCards()}<p class="b-next">다음 시간에는 이 문제들을 해결하기 위해 어떤 사람들과 단체가 노력하고 있는지 살펴보겠습니다.</p>`
-          : `<div class="reveal"><button class="btn btn-large btn-sun" data-action="board-reveal">${icon('eye')}남은 자료 보기</button></div>`}`;
+        <div class="b-reveal-wrap ${bs(1)}">${effortCards()}</div>
+        <p class="b-next ${bs(2)}">다음 시간에는 이 문제들을 해결하기 위해 어떤 사람들과 단체가 노력하고 있는지 살펴보겠습니다.</p>`;
     }
 
     const dots = BOARD_STAGES.map((s, i) => `
       <button class="b-dot" data-action="board-go" data-stage="${i}" aria-current="${i === state.board}">${s.label}</button>`).join('');
     const friendsOpen = !!state.db.settings.friendsOpen;
+    const total = boardSteps(stage);
+    const atEnd = state.board === BOARD_STAGES.length - 1 && state.boardStep >= total;
 
-    app.innerHTML = `
+    setBoardHtml(`
       <div class="b-screen">
         ${stage.minutes ? timerHtml() : ''}
-        <div class="b-body stage-${stage.id}">${body}</div>
+        <div class="b-body stage-${stage.id} ${state.animSlide ? 'slide-in' : ''}" data-action="board-click">${body}</div>
         <nav class="b-nav">
-          <button class="btn btn-ghost" data-action="board-prev" ${state.board === 0 ? 'disabled' : ''}>${icon('arrowLeft')}이전</button>
+          <button class="btn btn-ghost" data-action="board-prev" ${state.board === 0 && state.boardStep === 0 ? 'disabled' : ''}>${icon('arrowLeft')}이전</button>
           <div class="b-dots">${dots}</div>
           <button class="b-mini-switch ${friendsOpen ? 'on' : ''}" data-action="toggle-friends" title="학생 화면의 친구 보고서 탭">
             ${icon(friendsOpen ? 'unlock' : 'lock')}친구 보고서 ${friendsOpen ? '열림' : '닫힘'}
           </button>
-          <button class="btn" data-action="board-next" ${state.board === BOARD_STAGES.length - 1 ? 'disabled' : ''}>다음${icon('arrowRight')}</button>
+          <button class="btn" data-action="board-next" ${atEnd ? 'disabled' : ''}>다음${icon('arrowRight')}</button>
           <button class="btn-text b-exit" data-action="board-exit">${icon('x')}나가기</button>
         </nav>
-      </div>`;
+      </div>`);
     renderItemModal();
+  }
+
+  // 칠판 화면은 내용이 바뀌었을 때만 새로 그린다(학생이 자료를 가져갈 때마다 깜빡이지 않게).
+  function setBoardHtml(html) {
+    if (app.__html === html) return;
+    app.innerHTML = html;
+    app.__html = html;
+  }
+
+  // 다음: 이 장에 남은 요소가 있으면 하나 보이고, 다 보였으면 다음 장
+  function boardNext() {
+    const stage = BOARD_STAGES[state.board];
+    if (state.boardStep < boardSteps(stage)) {
+      state.boardStep += 1;
+      flashStep(state.boardStep);
+      render();
+    } else if (state.board < BOARD_STAGES.length - 1) {
+      boardGo(state.board + 1);
+    }
+  }
+
+  // 이전: 이 장에서 보인 요소를 하나 숨기고, 처음이면 앞 장(요소가 다 보인 상태)
+  function boardPrev() {
+    if (state.boardStep > 0) {
+      state.boardStep -= 1;
+      render();
+    } else if (state.board > 0) {
+      boardGo(state.board - 1, true);
+    }
+  }
+
+  let animTimer = null;
+  function flashStep(n) {
+    state.animStep = n;
+    clearTimeout(animTimer);
+    animTimer = setTimeout(() => { state.animStep = null; state.animSlide = false; }, 700);
   }
 
   function progress(label, n) {
@@ -814,16 +862,19 @@
     try {
       await Store.resetAll();
       state.showRemaining = false;
-      state.boardReveal = false;
       toast('초기화했어요.');
     } catch (e) {
       toast('초기화하지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
     }
   }
 
-  function boardGo(i) {
+  // atEnd: 앞 장으로 돌아갈 때는 그 장의 요소가 다 보인 상태로
+  function boardGo(i, atEnd = false) {
     state.board = Math.max(0, Math.min(BOARD_STAGES.length - 1, i));
     const stage = BOARD_STAGES[state.board];
+    state.boardStep = atEnd ? boardSteps(stage) : 0;
+    state.animSlide = true;
+    flashStep(null);
     if (stage.minutes && !state.timer.running && state.timer.stageId !== stage.id) setStageTimer(stage);
     render();
   }
@@ -894,6 +945,7 @@
         break;
       case 'board-open':
         state.board = 0;
+        state.boardStep = 0;
         document.documentElement.requestFullscreen?.().catch(() => {});
         render();
         break;
@@ -904,17 +956,14 @@
         render();
         break;
       case 'board-prev':
-        boardGo(state.board - 1);
+        boardPrev();
         break;
       case 'board-next':
-        boardGo(state.board + 1);
+      case 'board-click':
+        boardNext();
         break;
       case 'board-go':
         boardGo(Number(el.dataset.stage));
-        break;
-      case 'board-reveal':
-        state.boardReveal = true;
-        render();
         break;
       case 'timer-minus':
         adjustTimer(-1);
@@ -950,8 +999,9 @@
       return;
     }
     if (state.board === null || state.openItemId) return;
-    if (e.key === 'ArrowRight' || e.key === 'PageDown') boardGo(state.board + 1);
-    if (e.key === 'ArrowLeft' || e.key === 'PageUp') boardGo(state.board - 1);
+    // 발표용 리모컨(PageDown/PageUp)과 키보드 모두 지원
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); boardNext(); }
+    if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); boardPrev(); }
   });
 
   const offlineEl = document.getElementById('offline');

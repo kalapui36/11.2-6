@@ -452,7 +452,7 @@ body:has(.b-screen) .toast { top: 1.2rem; bottom: auto; }
 .b-title-kicker { margin: 0 0 0.6em; color: var(--primary); font-size: 1.35em; font-weight: 800; }
 .b-body .b-title h1 { margin: 0; max-width: none; font-size: 4.6em; line-height: 1.12; letter-spacing: -0.04em; }
 .b-title-sub { margin: 0.6em 0 0; color: var(--muted); font-size: 1.6em; font-weight: 700; }
-.b-title-groups { display: flex; flex-wrap: wrap; gap: 0.6em; margin-top: 2em; }
+.b-title-groups { display: grid; grid-template-columns: repeat(2, max-content); gap: 0.7em 0.8em; margin-top: 2em; }
 .b-title-groups span { display: inline-flex; align-items: center; gap: 0.45em; padding: 0.35em 1em 0.35em 0.4em; border-radius: 999px; background: var(--gs); color: var(--g); font-size: 1.15em; font-weight: 800; }
 .b-title-groups .emblem { width: 2em; height: 2em; }
 .b-title-img { width: 100%; max-height: 100%; min-height: 0; object-fit: contain; filter: drop-shadow(0 1em 2em rgba(14, 36, 64, 0.25)); }
@@ -466,10 +466,14 @@ body:has(.b-screen) .toast { top: 1.2rem; bottom: auto; }
 .seat-head .emblem { width: 2.2em; height: 2.2em; flex: none; }
 .seat-head b { font-size: 1.45em; letter-spacing: -0.02em; white-space: nowrap; }
 .desks { flex: 1; min-height: 0; display: grid; gap: 0.5em; }
-.desks.five { grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+/* 모둠 책상 5개: 앞에 1개, 그 뒤로 2개씩 두 줄
+     [1]
+   [2][3]
+   [4][5]   */
+.desks.five { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); width: min(100%, 22em); margin: 0 auto; }
 .desks.five .desk { grid-column: span 2; }
-.desks.five .desk:nth-child(4) { grid-column: 2 / span 2; }
-.desk { display: grid; place-items: center; min-height: 0; border-radius: 0.6em; background: #fff; border: 0.18em solid var(--g, var(--line)); color: var(--g, var(--ink)); font-size: 1.9em; font-weight: 800; }
+.desks.five .desk:nth-child(1) { grid-column: 2 / span 2; }
+.desk { display: grid; place-items: center; min-height: 0; overflow: hidden; border-radius: 0.6em; background: #fff; border: 0.16em solid var(--g, var(--line)); color: var(--g, var(--ink)); font-size: 1.6em; font-weight: 800; line-height: 1; }
 .desk.away { border-style: dashed; color: #b5bcc5; border-color: #c9ced5; background: #f4f5f7; }
 
 /* 활동3: 같은 번호 모둠(책상 4개, 원래 모둠 주제 표시) */
@@ -485,5 +489,20 @@ body:has(.b-screen) .toast { top: 1.2rem; bottom: auto; }
 .desk.topic.away { background: #f4f5f7; }
 .desk.topic.away .emblem { filter: grayscale(1); opacity: 0.45; }
 .desk.topic.away small { color: #b5bcc5; }
-.seat-legend { display: flex; align-items: center; gap: 0.5em; margin: 0.5em 0 0; color: var(--muted); font-size: 1em; font-weight: 700; }
-.desk-swatch { width: 1.6em; height: 1em; border-radius: 0.3em; border: 0.12em dashed #c9ced5; background: #f4f5f7; }
+
+
+/* ---------- 칠판: PPT처럼 누를 때마다 나타나기 ---------- */
+.b-body[data-action="board-click"] { cursor: pointer; }
+.bstep { opacity: 0; visibility: hidden; }
+.bstep.shown { opacity: 1; visibility: visible; }
+.bstep.anim { animation: bIn 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@keyframes bIn { from { opacity: 0; transform: translateY(0.9em) scale(0.98); } }
+.b-body.slide-in { animation: slideIn 0.45s ease-out; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(1.2em); } }
+.big-grid > .bstep { min-width: 0; }
+.big-grid > .bstep > .big-card { height: 100%; }
+.b-reveal-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* 활동3 아치형 자리 */
+.jig-map { gap: 0.7em; }
+.jig-map .seat-board { width: 34%; }

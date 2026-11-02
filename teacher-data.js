@@ -55,11 +55,14 @@ const SEAT_MAP = {
     { group: 'ecosystem', col: 1, row: 2 },
     { group: 'refugee',   col: 2, row: 2 },
   ],
+  // 우리 반 아치형 배치(전자칠판에서 볼 때)
+  //   1              5
+  //   2      3       4
   jigsaw: [
     { team: 1, col: 1, row: 1 },
-    { team: 2, col: 2, row: 1 },
-    { team: 3, col: 3, row: 1 },
-    { team: 4, col: 1, row: 2 },
-    { team: 5, col: 2, row: 2 },
+    { team: 5, col: 3, row: 1 },
+    { team: 2, col: 1, row: 2 },
+    { team: 3, col: 2, row: 2 },
+    { team: 4, col: 3, row: 2 },
   ],
 };
