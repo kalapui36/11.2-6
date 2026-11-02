@@ -5,8 +5,11 @@
     "claims": {
       ".read": true,
       ".write": true,
-      "$sid": {
-        ".validate": "$sid.matches(/^(resource|climate|ecosystem|refugee)-[1-5]$/) && newData.isString() && newData.val().length <= 60"
+      "$group": {
+        ".validate": "$group.matches(/^(resource|climate|ecosystem|refugee)$/)",
+        "$sid": {
+          ".validate": "$sid.matches(/^(resource|climate|ecosystem|refugee)-[1-5]$/) && $sid.beginsWith($group + '-') && newData.isString() && newData.val().length <= 60"
+        }
       }
     },
     "entries": {
@@ -18,6 +21,16 @@
         "text": { ".validate": "newData.isString() && newData.val().length <= 500" },
         "updatedAt": { ".validate": "newData.isNumber()" },
         "$other": { ".validate": false }
+      }
+    },
+    "online": {
+      ".read": true,
+      ".write": true,
+      "$sid": {
+        ".validate": "$sid.matches(/^(resource|climate|ecosystem|refugee)-[1-5]$/)",
+        "$device": {
+          ".validate": "$device.matches(/^[a-z0-9]{8,20}$/) && newData.isBoolean()"
+        }
       }
     },
     "settings": {

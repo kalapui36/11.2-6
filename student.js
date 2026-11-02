@@ -1,5 +1,6 @@
 // 학생 화면
 (() => {
+  if (!Store) return;   // 프로그램을 못 불러온 경우(store.js가 안내를 띄움)
   const ME_KEY = 'gi-student';
   const DRAFT_KEY = 'gi-draft';   // 저장 전 쓰던 정리. 새로고침해도 남도록 브라우저에 보관
   const TEXT_MAX = 300;
@@ -15,8 +16,12 @@
     justClaimed: null,     // 방금 가져간 자료(도장 찍히는 움직임용)
     helper: null,          // 낱말 골라 문장 만들기 창 { step, picks: { where, what, how } }
     busy: false,
+    savePending: false,    // 인터넷이 끊겨 저장이 서버에 아직 안 간 상태(연결되면 저절로 감)
+    loaded: false,         // 서버에서 처음 자료를 받아 왔는지
+    composing: false,      // 한글 조합 중(이때는 화면을 다시 그리지 않는다)
+    pendingRender: false,
     draft: loadDraft(),    // { sid, itemId, text } 또는 null
-    db: { claims: {}, entries: {}, settings: {} },
+    db: { claims: {}, entries: {}, settings: {}, online: {} },
   };
 
   const app = document.getElementById('app');
@@ -93,19 +98,39 @@
     return holder ? parseStudentId(holder).num : null;
   }
 
+  // 이 번호로 접속한 다른 기기 수
+  function otherDeviceCount(sid) {
+    return otherDevices(state.db.online, sid, Store.myDevice);
+  }
+
   // ---------- 그리기 ----------
+  // 내용이 바뀌었을 때만 화면을 바꾼다. 친구가 자료를 가져갈 때마다 입력칸이나 열린 창이
+  // 새로 만들어지면 한글 조합이 깨지고 누르던 버튼이 사라지기 때문이다.
+  function setHtml(el, html) {
+    if (el.__html === html) return false;
+    el.innerHTML = html;
+    el.__html = html;
+    return true;
+  }
+
   function render() {
+    if (state.composing) {
+      state.pendingRender = true;
+      return;
+    }
+    state.pendingRender = false;
     if (!state.me) {
       renderEntry();
-      modalRoot.innerHTML = '';
+      setHtml(modalRoot, '');
       return;
     }
     const active = document.activeElement;
     const caret = active && active.id === 'entry-text'
       ? [active.selectionStart, active.selectionEnd, active.scrollTop] : null;
-    renderMain();
+    const changed = renderMain();
+    updateSaveBar();
     renderOverlay();
-    if (caret) {
+    if (caret && changed) {
       const ta = document.getElementById('entry-text');
       if (ta) {
         ta.focus();
@@ -127,11 +152,16 @@
           <span class="gchoice-check">${icon('check')}</span>
         </button>`;
     }).join('');
-    const numButtons = Array.from({ length: MEMBERS_PER_GROUP }, (_, i) => i + 1).map((n) => `
-      <button class="nchoice" data-action="pick-num" data-num="${n}"
-        aria-pressed="${num === n}">${n}</button>`).join('');
+    // 이미 다른 기기가 접속 중인 번호는 고를 수 없다(같은 번호로 두 명이 들어가는 실수를 막음).
+    const numButtons = Array.from({ length: MEMBERS_PER_GROUP }, (_, i) => i + 1).map((n) => {
+      const taken = group && otherDeviceCount(makeStudentId(group, n)) > 0;
+      return `
+      <button class="nchoice ${taken ? 'taken' : ''}" data-action="pick-num" data-num="${n}"
+        aria-pressed="${num === n && !taken}" ${taken ? 'disabled' : ''}>${n}${taken ? '<small>접속 중</small>' : ''}</button>`;
+    }).join('');
+    const pickedTaken = group && num && otherDeviceCount(makeStudentId(group, num)) > 0;
 
-    app.innerHTML = `
+    setHtml(app, `
       <div class="entry">
         <section class="entry-hero">
           <p class="entry-kicker">6학년 사회 · 지구촌의 문제와 지속가능한 미래</p>
@@ -149,11 +179,12 @@
           <div class="gchoice-list">${groupButtons}</div>
           <div class="step-head"><span class="step-no">2</span><h2>내 번호를 골라요</h2></div>
           <div class="nchoice-row">${numButtons}</div>
-          <button class="btn btn-large btn-block start" data-action="start" ${group && num ? '' : 'disabled'}>
+          <p class="nchoice-note">'접속 중'인 번호는 다른 친구가 쓰고 있어요. 내 번호가 '접속 중'이면 선생님께 알려 주세요.</p>
+          <button class="btn btn-large btn-block start" data-action="start" ${group && num && !pickedTaken ? '' : 'disabled'}>
             탐사 시작하기 ${icon('arrowRight')}
           </button>
         </section>
-      </div>`;
+      </div>`);
   }
 
   // 스크롤 없이 한 화면에 맞추는 탭: 내 보고서, 비어 있거나 잠긴 화면. 자료실과 열린 친구 보고서는 스크롤한다.
@@ -176,11 +207,14 @@
         aria-selected="${state.tab === id}">${icon(ic)}<span>${label}</span>${extra}</button>`).join('');
 
     let content = '';
-    if (state.tab === 'items') content = renderItems();
+    if (!state.loaded) content = `<div class="loading">${icon('globe')}<p>자료를 불러오는 중이에요…</p></div>`;
+    else if (state.tab === 'items') content = renderItems();
     else if (state.tab === 'mine') content = renderMine();
     else content = renderFriends();
+    const dup = otherDeviceCount(myId()) > 0
+      ? `<div class="dup-warn">${icon('alert')}이 번호(${esc(group.name)} ${state.me.num}번)로 다른 기기도 접속해 있어요. 번호를 잘못 골랐는지 확인하고 선생님께 알려 주세요.</div>` : '';
 
-    app.innerHTML = `
+    return setHtml(app, `
       <header class="topbar">
         <div class="topbar-inner">
           <div class="brand">
@@ -197,8 +231,9 @@
           </div>
         </div>
         <nav class="tabs" role="tablist">${tabs}</nav>
+        ${dup}
       </header>
-      <main class="${fitMain() ? 'fit' : ''}">${content}</main>`;
+      <main class="${fitMain() ? 'fit' : ''}">${content}</main>`);
   }
 
   function pageHead(step, title, desc, side = '') {
@@ -250,7 +285,7 @@
       return `
         <button class="${cls}" data-action="open" data-item="${id}">
           <span class="card-img">
-            <img src="${esc(it.image)}" alt="" loading="lazy">
+            <img src="${esc(thumbOf(it))}" alt="" loading="lazy" decoding="async">
             <span class="card-no">자료 ${ITEM_NO[id]}</span>
             ${badge}
           </span>
@@ -272,15 +307,8 @@
         `<button class="btn btn-large" data-action="tab" data-tab="items">${icon('grid')}탐사 자료실로 가기</button>`);
     }
     const it = itemsById[id];
-    const text = currentText();
-    const saved = !!savedText(myId(), id);
-    const steps = [
-      ['자료 읽기', true],
-      ['문장 쓰기', !!text.trim() && text !== SENTENCE_FRAME],
-      ['저장하기', saved && !isDirty()],
-    ].map(([label, done], i) => `
-      <li class="${done ? 'done' : ''}"><span>${done ? icon('check') : i + 1}</span>${label}</li>`).join('');
-
+    // 입력칸 글자, 단계 표시, 저장 상태처럼 타자를 칠 때마다 바뀌는 부분은 여기서 그리지 않고
+    // updateSaveBar()가 채운다. 그래야 친구가 무엇을 해도 입력칸이 새로 만들어지지 않는다.
     return `
       ${pageHead('활동 2', '탐사 보고서 쓰기', '자료를 다시 읽고, 어디에서 어떤 문제가 일어나는지와 얼마나 심각한지를 1~2문장으로 써요.')}
       <div class="mine-layout">
@@ -297,21 +325,20 @@
           </div>
         </article>
         <section class="writer">
-          <ol class="steps">${steps}</ol>
+          <ol class="steps" id="steps"></ol>
           <label for="entry-text">${icon('pencil')}나의 탐사 보고</label>
           <div class="guide">
             <span>어디에서?</span><span>어떤 문제가?</span><span>얼마나 심각한가?</span>
             ${helperChoices() ? `<button class="helper-open" data-action="helper-open">${icon('sparkle')}낱말 골라 문장 만들기</button>` : ''}
           </div>
           <textarea id="entry-text" rows="5" maxlength="${TEXT_MAX}"
-            placeholder="어디에서 어떤 문제가 일어나고 있나요? 얼마나 심각한가요?">${esc(text)}</textarea>
+            placeholder="어디에서 어떤 문제가 일어나고 있나요? 얼마나 심각한가요?"></textarea>
           <div class="writer-meta">
-            <span id="save-state" class="save-state">${saveStateHtml()}</span>
-            <span id="char-count" class="char-count">${text.length} / ${TEXT_MAX}</span>
+            <span id="save-state" class="save-state"></span>
+            <span id="char-count" class="char-count"></span>
           </div>
           <div class="writer-actions">
-            <button id="save-btn" class="btn btn-large" data-action="save"
-              ${!isDirty() || !text.trim() || state.busy ? 'disabled' : ''}>${icon('save')}저장</button>
+            <button id="save-btn" class="btn btn-large" data-action="save" disabled>${icon('save')}저장</button>
             <button class="btn btn-ghost btn-large" data-action="explain">${icon('present')}설명 모드</button>
           </div>
           <p class="writer-tip">활동 3에서 친구에게 브리핑할 때 '설명 모드'를 켜요.</p>
@@ -340,6 +367,7 @@
 
   function saveStateHtml() {
     const entry = state.db.entries[myId()];
+    if (state.savePending) return '<span class="pending"><i></i>인터넷이 연결되면 저장돼요 · 화면을 닫지 마세요</span>';
     if (isDirty()) return '<span class="dirty"><i></i>아직 저장하지 않았어요</span>';
     if (entry && entry.itemId === myItemId()) {
       const t = new Date(entry.updatedAt);
@@ -349,14 +377,29 @@
     return '';
   }
 
-  // 입력할 때마다 화면 전체를 다시 그리지 않고 저장 상태만 바꾼다.
+  // 입력할 때마다 화면 전체를 다시 그리지 않고 입력칸 주변만 바꾼다.
   function updateSaveBar() {
-    const st = document.getElementById('save-state');
+    const ta = document.getElementById('entry-text');
+    if (!ta || !myItemId()) return;
+    const text = currentText();
+    // 입력칸 글자가 지금 글과 다를 때만 바꾼다(낱말 고르기로 문장을 넣었을 때, 저장 뒤 등).
+    if (ta.value !== text && !state.composing) {
+      const focused = document.activeElement === ta;
+      ta.value = text;
+      if (focused) ta.setSelectionRange(text.length, text.length);
+    }
+    const steps = [
+      ['자료 읽기', true],
+      ['문장 쓰기', !!text.trim() && text !== SENTENCE_FRAME],
+      ['저장하기', !!savedText(myId(), myItemId()) && !isDirty() && !state.savePending],
+    ].map(([label, done], i) => `
+      <li class="${done ? 'done' : ''}"><span>${done ? icon('check') : i + 1}</span>${label}</li>`).join('');
+    setHtml(document.getElementById('steps'), steps);
+    setHtml(document.getElementById('save-state'), saveStateHtml());
     const btn = document.getElementById('save-btn');
+    if (btn) btn.disabled = !isDirty() || !text.trim() || state.busy;
     const cc = document.getElementById('char-count');
-    if (st) st.innerHTML = saveStateHtml();
-    if (btn) btn.disabled = !isDirty() || !currentText().trim() || state.busy;
-    if (cc) cc.textContent = `${currentText().length} / ${TEXT_MAX}`;
+    if (cc) cc.textContent = `${text.length} / ${TEXT_MAX}`;
   }
 
   function renderFriends() {
@@ -380,7 +423,7 @@
         return `
           <div class="fcard">
             <div class="fcard-img">
-              <img src="${esc(it.image)}" alt="" loading="lazy">
+              <img src="${esc(thumbOf(it))}" alt="" loading="lazy" decoding="async">
               <span class="who">${n}번</span>
             </div>
             <div class="fbody">
@@ -400,7 +443,11 @@
       ${sections}`;
   }
 
+  // 열려 있던 창을 그대로 다시 그릴 때는 튀어나오는 움직임을 다시 하지 않는다(깜빡임 방지).
   function renderOverlay() {
+    const key = state.explain ? 'explain' : state.helper ? 'helper' : state.openItemId;
+    modalRoot.classList.toggle('no-anim', !!key && key === state.overlayKey);
+    state.overlayKey = key || null;
     if (state.explain) renderExplain();
     else if (state.helper) renderHelper();
     else renderDetail();
@@ -429,7 +476,7 @@
     const choices = helperChoices();
     if (!choices) {
       state.helper = null;
-      modalRoot.innerHTML = '';
+      setHtml(modalRoot, '');
       return;
     }
     const it = itemsById[myItemId()];
@@ -442,7 +489,7 @@
     const options = helperOptions(field).map((v) => `
       <button class="hchoice" data-action="helper-pick" data-value="${esc(v)}" aria-pressed="${picks[field] === v}">${esc(v)}</button>`).join('');
     const allPicked = HELPER_STEPS.every(([f]) => picks[f]);
-    modalRoot.innerHTML = `
+    setHtml(modalRoot, `
       <div class="overlay" data-action="helper-close">
         <div class="modal helper-modal" role="dialog" aria-modal="true" aria-label="낱말 골라 문장 만들기">
           <button class="close" data-action="helper-close" aria-label="닫기">${icon('x')}</button>
@@ -468,7 +515,7 @@
           </div>
           </section>
         </div>
-      </div>`;
+      </div>`);
   }
 
   function helperInsert() {
@@ -487,12 +534,12 @@
     const it = itemsById[myItemId()];
     if (!it) {
       state.explain = false;
-      modalRoot.innerHTML = '';
+      setHtml(modalRoot, '');
       return;
     }
     const text = savedText(myId(), it.id);
     const group = groupsById[state.me.group];
-    modalRoot.innerHTML = `
+    setHtml(modalRoot, `
       <div class="explain" role="dialog" aria-modal="true">
         <div class="explain-top">
           ${groupChip(group.id, `${group.name} ${state.me.num}번`)}
@@ -501,13 +548,13 @@
         <div class="explain-img"><img src="${esc(it.image)}" alt=""></div>
         <p class="explain-title">자료 ${ITEM_NO[it.id]} · ${esc(it.title)}</p>
         ${text ? `<p class="explain-text">${esc(text)}</p>` : '<p class="explain-text none">아직 정리를 저장하지 않았어요.</p>'}
-      </div>`;
+      </div>`);
   }
 
   function renderDetail() {
     const id = state.openItemId;
     if (!id) {
-      modalRoot.innerHTML = '';
+      setHtml(modalRoot, '');
       return;
     }
     const it = itemsById[id];
@@ -526,10 +573,10 @@
     } else {
       actions = `
         <span class="status">우리 모둠 주제에 맞는 자료인가요?</span>
-        <button class="btn btn-large" data-action="claim" ${state.busy ? 'disabled' : ''}>가져가기 ${icon('arrowRight')}</button>`;
+        <button class="btn btn-large" data-action="claim" ${state.busy ? 'disabled' : ''}>${state.busy ? '가져가는 중…' : `가져가기 ${icon('arrowRight')}`}</button>`;
     }
 
-    modalRoot.innerHTML = `
+    setHtml(modalRoot, `
       <div class="overlay" data-action="close">
         <div class="modal detail-modal" role="dialog" aria-modal="true" aria-label="${esc(it.title)}">
           <button class="close" data-action="close" aria-label="닫기">${icon('x')}</button>
@@ -545,7 +592,7 @@
           </div>
           <div class="actions">${actions}</div>
         </div>
-      </div>`;
+      </div>`);
   }
 
   // ---------- 동작 ----------
@@ -561,7 +608,7 @@
       if (!ok) return;
     }
     state.busy = true;
-    renderDetail();
+    renderOverlay();
     try {
       const res = await Store.claim(myId(), id);
       if (res.ok) {
@@ -573,7 +620,8 @@
       }
       else toast(`우리 모둠 ${parseStudentId(res.holder).num}번이 먼저 가져갔어요.`, 'error');
     } catch (e) {
-      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.', 'error');
+      // 응답이 늦을 뿐 나중에 들어갈 수도 있으므로 '실패'라고 단정하지 않는다.
+      toast('인터넷이 느려요. 잠시 뒤 카드에 도장이 찍히는지 보고, 안 찍히면 다시 눌러 주세요.', 'error');
     } finally {
       state.busy = false;
       render();
@@ -589,7 +637,7 @@
     );
     if (!ok) return;
     state.busy = true;
-    renderDetail();
+    renderOverlay();
     try {
       await Store.release(myId());
       setDraft(null);
@@ -612,12 +660,29 @@
     const itemId = myItemId();
     state.busy = true;
     updateSaveBar();
+    const sending = Store.saveEntry(myId(), itemId, text);
     try {
-      await Store.saveEntry(myId(), itemId, text);
+      await withTimeout(sending, 8000);
       setDraft(null);
+      state.savePending = false;
       celebrate('보고서를 저장했어요!', "활동 3에서 '설명 모드'로 친구에게 브리핑해요.");
     } catch (e) {
-      toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.', 'error');
+      if (e.message === 'timeout') {
+        // 인터넷이 끊겼거나 느림: 이 기기에 줄 세워 두었다가 연결되면 저절로 보낸다.
+        // 쓰던 글은 기기에 남겨 두어 화면을 닫았다 열어도 다시 저장할 수 있게 한다.
+        state.savePending = true;
+        toast('인터넷이 끊겨 있어요. 연결되면 자동으로 저장돼요. 화면을 닫지 마세요.', 'error');
+        sending.then(() => {
+          state.savePending = false;
+          if (state.draft && state.draft.text === text) setDraft(null);
+          toast('인터넷이 다시 연결되어 보고서를 저장했어요.');
+          render();
+        }).catch(() => {});
+      } else if (e.message === 'not-claimed') {
+        toast('가져간 자료가 바뀌었어요. 내 보고서를 다시 확인해 주세요.', 'error');
+      } else {
+        toast('저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.', 'error');
+      }
     } finally {
       state.busy = false;
       render();
@@ -642,9 +707,26 @@
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   }
 
+  // 번호를 잘못 골랐을 때 고치는 기능. 잘못된 번호로 가져간 자료가 남아 진짜 그 번호 친구를
+  // 헷갈리게 하지 않도록, 가져간 자료와 정리를 내려놓고 다시 고르게 한다.
   async function resetMe() {
-    const ok = await confirmBox('모둠과 번호를 다시 고를까요?', '', '다시 고르기');
+    const holding = !!myItemId();
+    const ok = await confirmBox(
+      '모둠과 번호를 다시 고를까요?',
+      holding ? '지금 가져간 자료와 쓴 정리는 내려놓아져요.' : '',
+      '다시 고르기',
+    );
     if (!ok) return;
+    if (holding) {
+      try {
+        await Store.release(myId());
+      } catch (e) {
+        toast('인터넷이 느려요. 잠시 뒤 다시 눌러 주세요.', 'error');
+        return;
+      }
+    }
+    setDraft(null);
+    Store.setPresence(null);
     localStorage.removeItem(ME_KEY);
     state.me = null;
     state.pick = { group: null, num: null };
@@ -671,11 +753,19 @@
         state.pick.num = Number(el.dataset.num);
         render();
         break;
-      case 'start':
+      case 'start': {
+        const sid = makeStudentId(state.pick.group, state.pick.num);
+        if (otherDeviceCount(sid) > 0) {
+          toast('이 번호로 이미 접속한 친구가 있어요. 내 모둠과 번호를 다시 확인해 주세요.', 'error');
+          render();
+          break;
+        }
         state.me = { ...state.pick };
         localStorage.setItem(ME_KEY, JSON.stringify(state.me));
+        Store.setPresence(sid);
         render();
         break;
+      }
       case 'reset-me':
         resetMe();
         break;
@@ -685,11 +775,11 @@
         break;
       case 'open':
         state.openItemId = el.dataset.item;
-        renderDetail();
+        renderOverlay();
         break;
       case 'close':
         state.openItemId = null;
-        renderDetail();
+        renderOverlay();
         break;
       case 'claim':
         claim();
@@ -738,6 +828,22 @@
     updateSaveBar();
   });
 
+  // 한글을 조합하는 동안(ㅂ→바→받)은 화면을 다시 그리지 않고, 조합이 끝나면 밀린 것을 그린다.
+  document.addEventListener('compositionstart', (e) => {
+    if (e.target.id === 'entry-text') state.composing = true;
+  });
+  document.addEventListener('compositionend', (e) => {
+    if (e.target.id !== 'entry-text') return;
+    state.composing = false;
+    setTimeout(() => { if (state.pendingRender && !state.composing) render(); }, 0);
+  });
+  document.addEventListener('focusout', (e) => {
+    if (e.target.id === 'entry-text' && state.composing) {
+      state.composing = false;
+      setTimeout(() => { if (state.pendingRender) render(); }, 0);
+    }
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.explain) {
       closeExplain();
@@ -750,7 +856,7 @@
     }
     if (e.key === 'Escape' && state.openItemId && !document.querySelector('.confirm')) {
       state.openItemId = null;
-      renderDetail();
+      renderOverlay();
     }
   });
 
@@ -762,14 +868,28 @@
   // 연결이 3초 넘게 끊겨 있을 때만 알림 띠를 보여 준다(처음 연결 중에는 숨김).
   const offlineEl = document.getElementById('offline');
   let offlineTimer = null;
+  let everConnected = false;
   Store.onConnection((connected) => {
     clearTimeout(offlineTimer);
-    if (connected) offlineEl.hidden = true;
-    else offlineTimer = setTimeout(() => { offlineEl.hidden = false; }, 3000);
+    if (connected) {
+      everConnected = true;
+      offlineEl.hidden = true;
+    } else {
+      offlineTimer = setTimeout(() => {
+        offlineEl.textContent = everConnected
+          ? '인터넷 연결이 끊겼어요. 잠시 기다리거나 선생님께 알려 주세요.'
+          : '수업 서버에 연결하지 못했어요. 와이파이를 확인하고, 계속 안 되면 선생님께 알려 주세요.';
+        offlineEl.hidden = false;
+      }, everConnected ? 3000 : 6000);
+    }
   });
+
+  if (state.me) Store.setPresence(myId());
+  render();   // 서버 연결 전에도 입장 화면은 바로 보이게 한다
 
   Store.subscribe((db) => {
     state.db = db;
+    state.loaded = true;
     render();
   });
 })();

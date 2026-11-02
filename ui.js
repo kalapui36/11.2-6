@@ -48,6 +48,11 @@ const GROUP_STYLE = {
   refugee:   { color: '#6656b8', soft: '#ebe8f9', icon: 'home' },
 };
 
+// 목록 카드에 쓰는 작은 사진(images/thumbs). 상세 화면은 원래 사진을 쓴다.
+function thumbOf(it) {
+  return it.image.replace('images/items/', 'images/thumbs/');
+}
+
 function emblem(groupId, cls = '') {
   return `<img class="emblem ${cls}" src="${UI_IMG}emblem-${groupId}.webp" alt="">`;
 }

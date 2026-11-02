@@ -295,10 +295,13 @@ button.big-card:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
 
 /* 동기 유발 */
 .b-motivation { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.1fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 3em; align-items: center; }
-.b-photos { height: 100%; min-height: 0; display: grid; grid-template-columns: 0.75fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 1em; }
+.b-photos { height: 100%; min-height: 0; display: grid; grid-template-columns: 1.3fr 0.8fr; grid-template-rows: minmax(0, 1fr); gap: 1em; }
 .b-photos figure { margin: 0; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
 .b-photos img { width: 100%; height: 100%; min-height: 0; object-fit: cover; border-radius: 0.9em; box-shadow: var(--sh-2); background: #dfe4ea; }
-.b-photos figcaption { margin-top: 0.5em; color: var(--muted); font-size: 0.9em; text-align: center; }
+.b-photos figcaption { margin-top: 0.5em; color: var(--ink-2); font-size: 0.95em; font-weight: 700; text-align: center; }
+.b-photos figcaption small { display: block; margin-top: 0.15em; color: var(--muted); font-size: 0.72em; font-weight: 500; }
+.b-photos figure:nth-child(1) img { object-position: 68% center; }
+.b-photos figure:nth-child(2) img { object-position: center 62%; }
 .b-asks { margin: 0; padding: 0; list-style: none; counter-reset: q; }
 .b-asks li { position: relative; margin-bottom: 1.2em; padding: 0.9em 1.1em 0.9em 3.6em; border-radius: 1em; background: #fff; box-shadow: var(--sh-1); font-size: 1.75em; font-weight: 800; line-height: 1.4; counter-increment: q; }
 .b-asks li::before { content: 'Q' counter(q); position: absolute; left: 0.8em; top: 0.85em; color: var(--primary); }
@@ -367,9 +370,9 @@ button.big-card:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
 
 /* 겹친 자료·남은 자료 카드: 화면 안에 들어가도록 작게 */
 .b-screen .big-grid { flex: 1; min-height: 0; align-content: start; grid-template-columns: repeat(auto-fill, minmax(12em, 1fr)); gap: 0.9em; }
-.stage-preview .big-grid { grid-template-columns: repeat(auto-fill, minmax(8.8em, 1fr)); gap: 0.6em; }
-.stage-preview .big-card { position: relative; }
-.stage-preview .big-card-img { aspect-ratio: 4 / 3; }
+.stage-preview .big-grid { flex: 1; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 0.8em; }
+.stage-preview .big-card { position: relative; overflow: hidden; }
+.b-screen .stage-preview .big-card-img { aspect-ratio: auto; height: 100%; }
 .stage-preview .big-card-body { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.6em 0.6em 0.5em; background: linear-gradient(transparent, rgba(14, 36, 64, 0.92)); }
 .stage-preview .big-card h3 { color: #fff; }
 .b-screen .big-card-img { aspect-ratio: 16 / 9; }
@@ -431,3 +434,15 @@ button.big-card:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
 
 .ws-links { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.6rem; }
 .ws-links .btn { text-decoration: none; }
+
+.b-team li.away { color: #9aa3ae; }
+.b-team li.away .emblem { filter: grayscale(1); opacity: 0.5; }
+.b-team li small { margin-left: 0.3em; font-size: 0.7em; font-weight: 700; color: #b0472f; }
+.ask-chip { display: inline-flex; align-items: center; padding: 0.15em 0.7em; border-radius: 999px; border: 2px dashed #c9c3b6; color: var(--muted); font-weight: 700; font-size: 0.9em; }
+.cell .away { display: block; margin-top: 0.2rem; color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+.sm-dup { display: flex; gap: 0.4em; align-items: flex-start; margin: 1rem 0 0; padding: 0.7rem 0.9rem; border-radius: var(--r); background: #fff1e6; color: #a2470d; font-weight: 700; font-size: 0.92rem; }
+.sm-dup .ic { flex: none; margin-top: 0.15em; }
+.sm-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
+.legend-sup b { color: #a2470d; font-weight: 700; }
+/* 칠판 모드에서는 알림을 위쪽에 띄워 슬라이드 아래 문구를 가리지 않게 한다 */
+body:has(.b-screen) .toast { top: 1.2rem; bottom: auto; }

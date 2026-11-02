@@ -1,5 +1,6 @@
 // 교사 화면
 (() => {
+  if (!Store) return;   // 프로그램을 못 불러온 경우(store.js가 안내를 띄움)
   const AUTH_KEY = 'gi-teacher';
   const itemsById = Object.fromEntries(ITEMS.map((it) => [it.id, it]));
   const groupsById = Object.fromEntries(GROUPS.map((g) => [g.id, g]));
@@ -21,17 +22,35 @@
     { id: 'preview',    label: '차시 예고' },
   ];
 
+  // 칠판 모드 단계와 타이머는 새로고침해도 이어지게 이 탭에 보관한다.
+  const BOARD_KEY = 'gi-board';
+  function loadBoard() {
+    try {
+      const b = JSON.parse(sessionStorage.getItem(BOARD_KEY));
+      if (b && Number.isInteger(b.board)) return b;
+    } catch (e) { /* 없으면 처음부터 */ }
+    return null;
+  }
+  const savedBoard = loadBoard();
+
   const state = {
     authed: sessionStorage.getItem(AUTH_KEY) === 'ok',
     view: 'status',            // 'status' | 'overlap' | 'remaining' | 'settings'
     showRemaining: false,      // 남은 자료는 버튼을 눌렀을 때만 보여 준다
     openItemId: null,          // 남은 자료 상세
     openStudent: null,         // 현황판에서 누른 학생(쓰기 도움 켜기/끄기)
-    board: null,               // 칠판 모드 단계 번호, 꺼져 있으면 null
-    boardReveal: false,        // 칠판 모드 남은 자료 공개 여부
-    timer: { stageId: null, duration: 0, left: 0, running: false, endAt: 0 },
-    db: { claims: {}, entries: {}, settings: {} },
+    board: savedBoard ? savedBoard.board : null,   // 칠판 모드 단계 번호, 꺼져 있으면 null
+    boardReveal: savedBoard ? !!savedBoard.reveal : false,   // 칠판 모드 남은 자료 공개 여부
+    timer: (savedBoard && savedBoard.timer) || { stageId: null, duration: 0, left: 0, running: false, endAt: 0 },
+    db: { claims: {}, entries: {}, settings: {}, online: {} },
   };
+
+  function saveBoard() {
+    try {
+      if (state.board === null) sessionStorage.removeItem(BOARD_KEY);
+      else sessionStorage.setItem(BOARD_KEY, JSON.stringify({ board: state.board, reveal: state.boardReveal, timer: state.timer }));
+    } catch (e) { /* 저장 못 해도 수업은 계속 */ }
+  }
 
   const app = document.getElementById('app');
   const modalRoot = document.getElementById('modal-root');
@@ -65,6 +84,16 @@
     return supportIds().includes(sid) || SUPPORT_STUDENTS.includes(sid);
   }
 
+  // 지금 이 번호로 접속한 기기 수(창을 닫으면 줄어든다)
+  function deviceCount(sid) {
+    return Object.keys((state.db.online || {})[sid] || {}).length;
+  }
+
+  // 자료가 그 모둠 주제에 맞는지(해결 노력 자료나 다른 주제 자료면 false)
+  function fitsGroup(itemId, group) {
+    return (ITEM_TOPICS[itemId] || []).includes(group);
+  }
+
   function counts() {
     const ids = allStudentIds();
     return {
@@ -75,6 +104,7 @@
 
   // 피드백이 필요한 학생: 해결 노력 자료를 가져갔거나, 자기 모둠 주제가 topics에 없는 자료를 가져감
   function checkReason(sid) {
+    if (deviceCount(sid) >= 2) return '같은 번호로 기기 2대 접속';
     const itemId = claimOf(sid);
     if (!itemId) return null;
     if (itemsById[itemId].type === 'effort') return '해결 노력 자료';
@@ -122,6 +152,7 @@
 
   // ---------- 그리기 ----------
   function render() {
+    saveBoard();
     if (!state.authed) {
       renderPin();
       return;
@@ -205,7 +236,11 @@
         const reason = checkReason(sid);
         const sup = isSupport(sid) ? `<span class="sup-mark" title="쓰기 도움">${icon('sparkle')}</span>` : '';
         if (!itemId) {
-          return `<td class="cell no-claim" data-action="open-student" data-sid="${sid}">${sup}<span class="state">자료 없음</span></td>`;
+          // 접속도 안 했으면 결석이거나 아직 못 들어온 학생
+          const away = deviceCount(sid) === 0 && Store.mode === 'firebase';
+          return `<td class="cell no-claim ${reason ? 'check' : ''}" data-action="open-student" data-sid="${sid}">${sup}
+            ${reason ? `<span class="flag">${icon('alert')}${reason}</span>` : ''}
+            <span class="state">자료 없음</span>${away ? '<span class="away">접속 안 함</span>' : ''}</td>`;
         }
         return `
           <td class="cell ${entry ? 'done' : 'no-entry'} ${reason ? 'check' : ''}" data-action="open-student" data-sid="${sid}">
@@ -227,7 +262,7 @@
       .map(({ sid, reason }) => `
         <li>
           <b>${esc(studentLabel(sid))}</b>
-          <span>자료 ${ITEM_NO[claimOf(sid)]} · ${esc(itemsById[claimOf(sid)].title)}</span>
+          ${claimOf(sid) ? `<span>자료 ${ITEM_NO[claimOf(sid)]} · ${esc(itemsById[claimOf(sid)].title)}</span>` : ''}
           <span class="pill warn">${reason}</span>
         </li>`).join('');
 
@@ -243,7 +278,7 @@
             <span class="sw no-entry"></span>정리 전
             <span class="sw done"></span>정리 완료
             <span class="sw check"></span>확인 필요
-            <span class="legend-sup">${icon('sparkle')}쓰기 도움</span>
+            <span class="legend-sup">${icon('sparkle')}쓰기 도움${allStudentIds().some(isSupport) ? '' : ' <b>(아직 아무도 안 켬)</b>'}</span>
             <span class="legend-tip">칸을 누르면 정리 전체 보기 · 쓰기 도움 켜기</span>
           </p>
         </section>
@@ -275,6 +310,31 @@
     if (!list.length) return `<div class="empty"><div class="empty-icon">${icon('link')}</div><p>아직 두 모둠 이상이 함께 가져간 자료가 없어요.</p></div>`;
     return `<div class="big-grid">${list.map(({ item, groups }) => itemCard(item, `
       <div class="chips">${groups.map((g) => groupChip(g, groupsById[g].name)).join('')}</div>`)).join('')}</div>`;
+  }
+
+  // 칠판 정리①: 두 문제에 함께 해당하는 자료 가운데, 주제가 맞는 모둠이 가져간 것.
+  // 잘못 가져간 자료(해결 노력, 다른 주제)는 '겹친 사례'로 보여 주지 않는다.
+  function boardOverlapCards() {
+    const list = ITEMS
+      .filter((it) => (ITEM_TOPICS[it.id] || []).length >= 2)
+      .map((it) => ({
+        item: it,
+        groups: GROUPS.map((g) => g.id).filter((g) => fitsGroup(it.id, g) && NUMS.some((n) => claimOf(makeStudentId(g, n)) === it.id)),
+      }))
+      .filter((x) => x.groups.length)
+      .sort((a, b) => b.groups.length - a.groups.length);
+    if (!list.length) {
+      // 아무도 안 가져갔으면 예시 자료 하나로 이야기를 나눈다.
+      const ex = itemsById.tuvalu;
+      return `<div class="big-grid">${itemCard(ex, '<div class="chips"><span class="ask-chip">어떤 문제와 관련 있을까요?</span></div>')}</div>`;
+    }
+    return `<div class="big-grid">${list.map(({ item, groups }) => itemCard(item, `
+      <div class="chips">${groups.map((g) => groupChip(g, groupsById[g].name)).join('')}${groups.length < 2 ? '<span class="ask-chip">또 어떤 문제와 관련 있을까요?</span>' : ''}</div>`)).join('')}</div>`;
+  }
+
+  // 칠판 차시 예고: 해결 노력 자료(문제 자료는 학생 수보다 많아 항상 몇 개 남으므로 섞지 않는다)
+  function effortCards() {
+    return `<div class="big-grid">${ITEMS.filter((it) => it.type === 'effort').map((it) => itemCard(it)).join('')}</div>`;
   }
 
   function remainingCards() {
@@ -403,8 +463,37 @@
             </button>
           </div>
           ${fixed ? '<p class="muted sm-note">data.js의 SUPPORT_STUDENTS에 들어 있어 여기서 끌 수 없어요.</p>' : ''}
+          ${deviceCount(sid) >= 2 ? `<p class="sm-dup">${icon('alert')}이 번호로 기기 ${deviceCount(sid)}대가 접속해 있어요. 번호를 잘못 고른 학생에게 '다시 고르기'를 누르게 해 주세요.</p>` : ''}
+          ${it ? `
+          <div class="sm-actions">
+            <button class="btn btn-ghost" data-action="clear-entry" data-sid="${sid}" ${entry ? '' : 'disabled'}>${icon('trash')}정리 지우기</button>
+            <button class="btn btn-ghost-danger" data-action="force-release" data-sid="${sid}">자료 내려놓게 하기</button>
+          </div>` : ''}
         </div>
       </div>`;
+  }
+
+  // 장난 글을 지우거나, 잘못 가져간 자료를 대신 내려놓아 줄 때
+  async function clearEntry(sid) {
+    const ok = await confirmBox(`${studentLabel(sid)}의 정리를 지울까요?`, '자료는 그대로 두고 쓴 글만 지워요. 학생이 다시 쓸 수 있어요.', '지우기', 'btn btn-danger');
+    if (!ok) return;
+    try {
+      await Store.clearEntry(sid);
+      toast('정리를 지웠어요.');
+    } catch (e) {
+      toast('지우지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
+    }
+  }
+
+  async function forceRelease(sid) {
+    const ok = await confirmBox(`${studentLabel(sid)}의 자료를 내려놓게 할까요?`, '가져간 자료와 쓴 정리가 함께 지워져요.', '내려놓기', 'btn btn-danger');
+    if (!ok) return;
+    try {
+      await Store.release(sid);
+      toast('자료를 내려놓았어요.');
+    } catch (e) {
+      toast('바꾸지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
+    }
   }
 
   async function toggleSupport(sid) {
@@ -430,8 +519,8 @@
         <p class="b-kicker">동기 유발</p>
         <div class="b-motivation">
           <div class="b-photos">
-            <figure><img src="images/items/korea-summer.webp" alt=""><figcaption>서울의 무더위쉼터 안내판</figcaption></figure>
-            <figure><img src="images/items/hottest-year.webp" alt=""><figcaption>2024년 세계 기온 지도 (빨갈수록 평소보다 더움)</figcaption></figure>
+            <figure><img src="images/board/heat-water.webp" alt=""><figcaption>무더위를 식히려고 물을 뿌리는 사람<small>사진: Instant Vantage, CC BY-SA 2.0, 위키미디어 공용</small></figcaption></figure>
+            <figure><img src="images/board/heat-watch.webp" alt=""><figcaption>스마트워치에 뜬 폭염 경보 (낮 기온 32~37℃)<small>사진: Dennis Sylvester Hurd, CC BY 2.0, 위키미디어 공용</small></figcaption></figure>
           </div>
           <ol class="b-asks">
             <li>올여름 더위를 겪으며 어떤 일이 있었나요?</li>
@@ -484,7 +573,7 @@
           <li>맡은 사례에서는 <b>어떤 문제</b>가 일어나고 있나요?</li>
           <li>그 문제는 <b>얼마나 심각한가요?</b></li>
           <li>정리한 내용을 '내 보고서'에 쓰고 <b>저장</b>을 눌러요.</li>
-          <li>활동지 표의 <b>우리 모둠 줄</b>에 ○ 하고, 그 줄을 먼저 채워요.</li>
+          <li>활동지 표에서 <b>우리 모둠 줄</b>의 □에 ✔ 표시하고, 그 줄을 먼저 채워요.</li>
         </ol>
         <p class="b-example">예) 투발루의 섬들이 바닷물에 잠기고 있습니다. 9개 섬 가운데 2개가 이미 거의 잠길 만큼 심각합니다.</p>
         ${progress('정리를 저장한 사람', c.written)}`;
@@ -492,7 +581,11 @@
       const teams = NUMS.map((n) => `
         <div class="b-team">
           <h3>${n}번 모둠</h3>
-          <ul>${GROUPS.map((g) => `<li>${emblem(g.id)}${esc(g.name)} ${n}번</li>`).join('')}</ul>
+          <ul>${GROUPS.map((g) => {
+            const sid = makeStudentId(g.id, n);
+            const away = Store.mode === 'firebase' && !claimOf(sid) && deviceCount(sid) === 0;
+            return `<li class="${away ? 'away' : ''}">${emblem(g.id)}${esc(g.name)} ${n}번${away ? '<small>접속 안 함</small>' : ''}</li>`;
+          }).join('')}</ul>
         </div>`).join('');
       body = `
         <p class="b-kicker">활동 3 · 15분</p>
@@ -506,11 +599,12 @@
       body = `
         <p class="b-kicker">정리 ①</p>
         <h1>두 가지 문제에 모두 해당하는 사례가 있었나요?</h1>
-        ${overlapCards()}`;
+        ${boardOverlapCards()}`;
     } else if (stage.id === 'summary') {
       const cols = GROUPS.map((g) => {
         const st = GROUP_STYLE[g.id];
-        const ids = [...new Set(NUMS.map((n) => claimOf(makeStudentId(g.id, n))).filter(Boolean))];
+        // 모둠 주제에 맞게 가져간 자료만 보여 준다(잘못 가져간 자료는 빼기).
+        const ids = [...new Set(NUMS.map((n) => claimOf(makeStudentId(g.id, n))).filter((id) => id && fitsGroup(id, g.id)))];
         const list = ids.length
           ? ids.map((id) => `<li><em>${ITEM_NO[id]}</em>${esc(itemsById[id].title)}</li>`).join('')
           : '<li class="none">아직 모은 자료가 없어요.</li>';
@@ -541,7 +635,7 @@
         <p class="b-kicker">차시 예고</p>
         <h1>아무 모둠도 가져가지 않은 자료들은 무엇에 관한 자료인가요?</h1>
         ${state.boardReveal
-          ? `${remainingCards()}<p class="b-next">다음 시간에는 이 문제들을 해결하기 위해 어떤 사람들과 단체가 노력하고 있는지 살펴보겠습니다.</p>`
+          ? `${effortCards()}<p class="b-next">다음 시간에는 이 문제들을 해결하기 위해 어떤 사람들과 단체가 노력하고 있는지 살펴보겠습니다.</p>`
           : `<div class="reveal"><button class="btn btn-large btn-sun" data-action="board-reveal">${icon('eye')}남은 자료 보기</button></div>`}`;
     }
 
@@ -725,6 +819,12 @@
         break;
       case 'toggle-support':
         toggleSupport(el.dataset.sid);
+        break;
+      case 'clear-entry':
+        clearEntry(el.dataset.sid);
+        break;
+      case 'force-release':
+        forceRelease(el.dataset.sid);
         break;
       case 'reset':
         resetAll();
