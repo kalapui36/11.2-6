@@ -10,9 +10,11 @@
   // 칠판 모드 단계. 학생이 봐도 되는 내용만 나온다(이름, 주제 분류 없음).
   // 수업 지도안 흐름. minutes가 있는 단계는 타이머가 그 시간으로 맞춰진다.
   const BOARD_STAGES = [
+    { id: 'cover',      label: '표지' },
     { id: 'motivation', label: '동기 유발' },
     { id: 'question',   label: '탐구 질문' },
     { id: 'activities', label: '활동 안내' },
+    { id: 'seats',      label: '모둠 자리' },
     { id: 'act1',       label: '활동1', minutes: 10 },
     { id: 'act2',       label: '활동2', minutes: 5 },
     { id: 'act3',       label: '활동3', minutes: 15 },
@@ -87,6 +89,58 @@
   // 지금 이 번호로 접속한 기기 수(창을 닫으면 줄어든다)
   function deviceCount(sid) {
     return Object.keys((state.db.online || {})[sid] || {}).length;
+  }
+
+  const SHORT_NAME = { resource: '자원·에너지', climate: '기후변화', ecosystem: '생태계 파괴', refugee: '난민' };
+
+  // 수업이 시작됐는지(한 명이라도 접속하거나 자료를 가져감). 시작 전에는 '접속 안 함'을 표시하지 않는다.
+  function classStarted() {
+    return Store.mode === 'firebase' && allStudentIds().some((sid) => deviceCount(sid) > 0 || claimOf(sid));
+  }
+  function isAway(sid) {
+    return classStarted() && !claimOf(sid) && deviceCount(sid) === 0;
+  }
+
+  // 원래 모둠 자리 그림: 전자칠판을 위에 두고 모둠마다 책상 5개(3+2)
+  function homeSeatMap() {
+    const cols = Math.max(...SEAT_MAP.home.map((s) => s.col));
+    const clusters = SEAT_MAP.home.map(({ group, col, row }) => {
+      const st = GROUP_STYLE[group];
+      const desks = NUMS.map((n) => `<span class="desk ${isAway(makeStudentId(group, n)) ? 'away' : ''}">${n}</span>`).join('');
+      return `
+        <div class="seat-group" style="grid-column:${col};grid-row:${row};--g:${st.color};--gs:${st.soft}">
+          <div class="seat-head">${emblem(group)}<b>${esc(groupsById[group].name)}</b></div>
+          <div class="desks five">${desks}</div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="seat-map">
+        <div class="seat-board">전자칠판</div>
+        <div class="seat-grid" style="grid-template-columns:repeat(${cols}, minmax(0, 1fr))">${clusters}</div>
+      </div>`;
+  }
+
+  // 활동3 같은 번호 모둠 자리 그림: 모둠마다 책상 4개(2×2), 책상에 원래 모둠 주제 표시
+  function jigsawSeatMap() {
+    const cols = Math.max(...SEAT_MAP.jigsaw.map((s) => s.col));
+    const clusters = SEAT_MAP.jigsaw.map(({ team, col, row }) => {
+      const desks = GROUPS.map((g) => {
+        const st = GROUP_STYLE[g.id];
+        const away = isAway(makeStudentId(g.id, team));
+        return `
+          <span class="desk topic ${away ? 'away' : ''}" style="--g:${st.color};--gs:${st.soft}">
+            ${emblem(g.id)}<b>${SHORT_NAME[g.id]}</b><small>${team}번</small>
+          </span>`;
+      }).join('');
+      return `
+        <div class="seat-group team" style="grid-column:${col};grid-row:${row}">
+          <div class="seat-head"><b>${team}번 모둠</b></div>
+          <div class="desks four">${desks}</div>
+        </div>`;
+    }).join('');
+    const anyAway = allStudentIds().some(isAway);
+    return `<div class="seat-grid jig" style="grid-template-columns:repeat(${cols}, minmax(0, 1fr))">${clusters}</div>
+      ${anyAway ? '<p class="seat-legend"><span class="desk-swatch"></span>흐린 점선 자리: 아직 접속하지 않은 학생(결석이면 그 모둠은 한 주제를 선생님이 안내)</p>' : ''}`;
   }
 
   // 자료가 그 모둠 주제에 맞는지(해결 노력 자료나 다른 주제 자료면 false)
@@ -514,7 +568,26 @@
     const c = counts();
     let body = '';
 
-    if (stage.id === 'motivation') {
+    if (stage.id === 'cover') {
+      body = `
+        <div class="b-title">
+          <div class="b-title-text">
+            <p class="b-title-kicker">6학년 사회 · 3단원 지구촌의 문제와 지속가능한 미래</p>
+            <h1>지구촌을 위협하는<br>문제를 찾아라!</h1>
+            <p class="b-title-sub">지구촌 탐사대 · 3/8차시</p>
+            <div class="b-title-groups">${GROUPS.map((g) => {
+              const st = GROUP_STYLE[g.id];
+              return `<span style="--g:${st.color};--gs:${st.soft}">${emblem(g.id)}${esc(g.name)}</span>`;
+            }).join('')}</div>
+          </div>
+          <img class="b-title-img" src="${UI_IMG}cover.webp" alt="">
+        </div>`;
+    } else if (stage.id === 'seats') {
+      body = `
+        <p class="b-kicker">모둠 자리</p>
+        <h1>우리 모둠과 맡은 지구촌 문제</h1>
+        ${homeSeatMap()}`;
+    } else if (stage.id === 'motivation') {
       body = `
         <p class="b-kicker">동기 유발</p>
         <div class="b-motivation">
@@ -578,19 +651,10 @@
         <p class="b-example">예) 투발루의 섬들이 바닷물에 잠기고 있습니다. 9개 섬 가운데 2개가 이미 거의 잠길 만큼 심각합니다.</p>
         ${progress('정리를 저장한 사람', c.written)}`;
     } else if (stage.id === 'act3') {
-      const teams = NUMS.map((n) => `
-        <div class="b-team">
-          <h3>${n}번 모둠</h3>
-          <ul>${GROUPS.map((g) => {
-            const sid = makeStudentId(g.id, n);
-            const away = Store.mode === 'firebase' && !claimOf(sid) && deviceCount(sid) === 0;
-            return `<li class="${away ? 'away' : ''}">${emblem(g.id)}${esc(g.name)} ${n}번${away ? '<small>접속 안 함</small>' : ''}</li>`;
-          }).join('')}</ul>
-        </div>`).join('');
       body = `
         <p class="b-kicker">활동 3 · 15분</p>
         <h1>친구에게 설명하고 정리하기</h1>
-        <div class="b-teams">${teams}</div>
+        ${jigsawSeatMap()}
         <ol class="b-steps compact">
           <li>'내 보고서'에서 <b>설명 모드</b>를 켜고, 사진을 보여 주며 내가 맡은 문제를 설명해요.</li>
           <li>친구의 설명을 듣고 <b>활동지 표의 빈칸</b>을 채워요.</li>
@@ -628,7 +692,6 @@
             <span>탐구 질문</span>
             <p>지구촌을 위협하는 문제에는 어떤 것들이 있을까요?</p>
           </div>
-          <p class="b-example">예) 지구촌을 위협하는 문제에는 투발루의 섬이 바닷물에 잠기는 기후변화 문제, 수단 사람들이 전쟁으로 살 곳을 잃는 난민 문제 등이 있습니다.</p>
         </div>`;
     } else if (stage.id === 'preview') {
       body = `

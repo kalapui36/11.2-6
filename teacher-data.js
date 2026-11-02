@@ -44,3 +44,22 @@ const ITEM_TOPICS = {
   'ocean-cleanup':    [],
   'refugee-team':     [],
 };
+
+// 교실 자리 배치(칠판 모드 '우리 모둠 자리'와 활동3 화면의 그림). 실제 교실에 맞게 바꾸면 된다.
+//   home:   원래 모둠 자리. col(가로 칸), row(세로 줄)는 전자칠판에서 본 위치. 1부터 시작.
+//   jigsaw: 활동3 같은 번호 모둠 자리(1번 모둠~5번 모둠).
+const SEAT_MAP = {
+  home: [
+    { group: 'resource',  col: 1, row: 1 },
+    { group: 'climate',   col: 2, row: 1 },
+    { group: 'ecosystem', col: 1, row: 2 },
+    { group: 'refugee',   col: 2, row: 2 },
+  ],
+  jigsaw: [
+    { team: 1, col: 1, row: 1 },
+    { team: 2, col: 2, row: 1 },
+    { team: 3, col: 3, row: 1 },
+    { team: 4, col: 1, row: 2 },
+    { team: 5, col: 2, row: 2 },
+  ],
+};
